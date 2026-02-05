@@ -1,0 +1,6 @@
+Django>=4.2,<5
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+python-dotenvscikit-learn>=1.3.0
+numpy>=1.24.0

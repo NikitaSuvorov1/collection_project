@@ -1,0 +1,44 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "username": "admin",
+      "is_superuser": true,
+      "is_staff": true,
+      "email": "admin@example.com",
+      "password": "pbkdf2_sha256$260000$Dx...$placeholder"
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "username": "operator1",
+      "is_superuser": false,
+      "is_staff": false,
+      "email": "op1@example.com",
+      "password": "pbkdf2_sha256$260000$Dx...$placeholder"
+    }
+  },
+  {
+    "model": "collection_app.client",
+    "pk": 1,
+    "fields": {
+      "first_name": "Иван",
+      "last_name": "Иванов",
+      "phone": "+79991234567",
+      "email": "ivan@example.com"
+    }
+  },
+  {
+    "model": "collection_app.client",
+    "pk": 2,
+    "fields": {
+      "first_name": "Петр",
+      "last_name": "Петров",
+      "phone": "",
+      "email": "petr@example.com"
+    }
+  }
+]

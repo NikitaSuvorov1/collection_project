@@ -1,0 +1,11 @@
+{
+  // Use the project's virtual environment for language server and debugger
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  // Help Pylance find local packages / project modules
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/collection_app"
+  ],
+"python.analysis.diagnosticMode": "workspace",
+"vscode-aiconfig.pythonInterpreter": "C:\\Users\\zkm_0\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+}
