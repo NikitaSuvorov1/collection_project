@@ -2,6 +2,68 @@ import React, { useState, useEffect } from 'react';
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
+// Пресеты: высокая вероятность одобрения
+const HIGH_PROB_SAMPLES = [
+  {
+    label: 'Надёжный заёмщик',
+    description: 'Высокий доход, стабильная работа, хорошая КИ, небольшой кредит',
+    data: {
+      gender: 'M', marital_status: 'married', employment: 'employed',
+      income: 180000, monthly_expenses: 40000, loan_amount: 300000,
+      loan_term: 24, children_count: 1, credit_history: 1, region: 'Москва'
+    }
+  },
+  {
+    label: 'Опытный самозанятый',
+    description: 'Самозанятый с высоким доходом, минимальными расходами',
+    data: {
+      gender: 'F', marital_status: 'single', employment: 'self_employed',
+      income: 220000, monthly_expenses: 35000, loan_amount: 400000,
+      loan_term: 36, children_count: 0, credit_history: 1, region: 'Санкт-Петербург'
+    }
+  },
+  {
+    label: 'Семейная пара',
+    description: 'Женат, работает, умеренный кредит на 12 месяцев',
+    data: {
+      gender: 'M', marital_status: 'married', employment: 'employed',
+      income: 150000, monthly_expenses: 45000, loan_amount: 200000,
+      loan_term: 12, children_count: 2, credit_history: 1, region: 'Казань'
+    }
+  },
+];
+
+// Пресеты: низкая вероятность одобрения
+const LOW_PROB_SAMPLES = [
+  {
+    label: 'Безработный, плохая КИ',
+    description: 'Нет работы, были просрочки, большая сумма кредита',
+    data: {
+      gender: 'M', marital_status: 'divorced', employment: 'unemployed',
+      income: 15000, monthly_expenses: 12000, loan_amount: 1000000,
+      loan_term: 60, children_count: 3, credit_history: 0, region: 'Воронеж'
+    }
+  },
+  {
+    label: 'Студент без дохода',
+    description: 'Студент, минимальный доход, большой кредит',
+    data: {
+      gender: 'F', marital_status: 'single', employment: 'student',
+      income: 20000, monthly_expenses: 18000, loan_amount: 800000,
+      loan_term: 48, children_count: 0, credit_history: 0, region: 'Новосибирск'
+    }
+  },
+  {
+    label: 'Высокая долговая нагрузка',
+    description: 'Доход есть, но расходы почти равны доходу + большой кредит',
+    data: {
+      gender: 'M', marital_status: 'married', employment: 'employed',
+      income: 60000, monthly_expenses: 55000, loan_amount: 1500000,
+      loan_term: 60, children_count: 4, credit_history: 0, region: 'Омск'
+    }
+  },
+];
+
 export default function LoanPredictionPage() {
   const [formData, setFormData] = useState({
     gender: 'M',
@@ -21,6 +83,7 @@ export default function LoanPredictionPage() {
   const [error, setError] = useState(null);
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
+  const [activeSample, setActiveSample] = useState(null);
 
   // Загрузка всех заявок при монтировании
   useEffect(() => {
@@ -92,12 +155,110 @@ export default function LoanPredictionPage() {
     return '#ef4444';
   };
 
+  // Применить пресет: заполняет форму и отправляет запрос
+  const applySample = async (sample, key) => {
+    setFormData(sample.data);
+    setActiveSample(key);
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch(`${API_URL}/applications/predict_approval/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sample.data)
+      });
+      if (!response.ok) throw new Error(`Ошибка сервера: ${response.status}`);
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const genderLabel = (g) => g === 'M' ? 'Мужской' : 'Женский';
+  const maritalLabel = (m) => ({ single: 'Холост', married: 'Женат/Замужем', divorced: 'Разведён(а)', widowed: 'Вдовец/Вдова' }[m] || m);
+  const employmentLabel = (e) => ({ employed: 'Работает', self_employed: 'Самозанятый', unemployed: 'Безработный', retired: 'Пенсионер', student: 'Студент' }[e] || e);
+  const creditHistLabel = (c) => c === 1 ? 'Хорошая' : 'Плохая';
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🏦 Прогноз одобрения кредита</h1>
       <p style={styles.subtitle}>
         Заполните данные заявки для получения прогноза вероятности одобрения
       </p>
+
+      {/* Выборки */}
+      <div style={styles.samplesContainer}>
+        <div style={styles.samplesBlock}>
+          <h2 style={{ ...styles.samplesTitle, color: '#22c55e' }}>
+            ✅ Высокая вероятность одобрения
+          </h2>
+          <div style={styles.samplesGrid}>
+            {HIGH_PROB_SAMPLES.map((s, i) => {
+              const key = `high-${i}`;
+              return (
+                <div
+                  key={key}
+                  style={{
+                    ...styles.sampleCard,
+                    borderColor: activeSample === key ? '#22c55e' : '#334155',
+                    boxShadow: activeSample === key ? '0 0 0 2px #22c55e44' : 'none',
+                  }}
+                  onClick={() => applySample(s, key)}
+                >
+                  <div style={styles.sampleLabel}>{s.label}</div>
+                  <div style={styles.sampleDesc}>{s.description}</div>
+                  <div style={styles.sampleAttrs}>
+                    <span>👤 {genderLabel(s.data.gender)}</span>
+                    <span>💼 {employmentLabel(s.data.employment)}</span>
+                    <span>💰 {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
+                    <span>🏦 {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
+                    <span>📅 {s.data.loan_term} мес.</span>
+                    <span>📋 КИ: {creditHistLabel(s.data.credit_history)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={styles.samplesBlock}>
+          <h2 style={{ ...styles.samplesTitle, color: '#ef4444' }}>
+            ❌ Низкая вероятность одобрения
+          </h2>
+          <div style={styles.samplesGrid}>
+            {LOW_PROB_SAMPLES.map((s, i) => {
+              const key = `low-${i}`;
+              return (
+                <div
+                  key={key}
+                  style={{
+                    ...styles.sampleCard,
+                    borderColor: activeSample === key ? '#ef4444' : '#334155',
+                    boxShadow: activeSample === key ? '0 0 0 2px #ef444444' : 'none',
+                  }}
+                  onClick={() => applySample(s, key)}
+                >
+                  <div style={styles.sampleLabel}>{s.label}</div>
+                  <div style={styles.sampleDesc}>{s.description}</div>
+                  <div style={styles.sampleAttrs}>
+                    <span>👤 {genderLabel(s.data.gender)}</span>
+                    <span>💼 {employmentLabel(s.data.employment)}</span>
+                    <span>💰 {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
+                    <span>🏦 {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
+                    <span>📅 {s.data.loan_term} мес.</span>
+                    <span>📋 КИ: {creditHistLabel(s.data.credit_history)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       <div style={styles.content}>
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -681,5 +842,56 @@ const styles = {
   },
   noPrediction: {
     color: '#64748b',
+  },
+  // Стили для выборок
+  samplesContainer: {
+    maxWidth: '1200px',
+    margin: '0 auto 2rem',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '1.5rem',
+  },
+  samplesBlock: {
+    backgroundColor: '#1e293b',
+    borderRadius: '12px',
+    padding: '1.25rem',
+  },
+  samplesTitle: {
+    fontSize: '1.1rem',
+    fontWeight: '600',
+    marginBottom: '1rem',
+    paddingBottom: '0.5rem',
+    borderBottom: '1px solid #334155',
+  },
+  samplesGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  sampleCard: {
+    backgroundColor: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '8px',
+    padding: '1rem',
+    cursor: 'pointer',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+  },
+  sampleLabel: {
+    fontWeight: '600',
+    fontSize: '1rem',
+    marginBottom: '0.25rem',
+    color: '#e2e8f0',
+  },
+  sampleDesc: {
+    fontSize: '0.8rem',
+    color: '#94a3b8',
+    marginBottom: '0.5rem',
+  },
+  sampleAttrs: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+    fontSize: '0.78rem',
+    color: '#cbd5e1',
   },
 };

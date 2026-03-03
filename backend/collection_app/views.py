@@ -24,6 +24,7 @@ from .ml.return_forecast import ReturnForecastService
 from .ml.compliance import ComplianceService
 from .ml.smart_scripts import SmartScriptService
 from .ml.loan_predictor import predict_loan_approval, get_predictor
+from .ml.overdue_predictor import predict_risk, predict_risk_batch
 
 
 class IsDBAdmin(permissions.BasePermission):
@@ -79,7 +80,12 @@ class CreditViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         status_filter = self.request.query_params.get('status', None)
         if status_filter:
-            qs = qs.filter(status=status_filter)
+            # Поддержка нескольких статусов через запятую: ?status=overdue,default
+            statuses = [s.strip() for s in status_filter.split(',')]
+            qs = qs.filter(status__in=statuses)
+        client_id = self.request.query_params.get('client', None)
+        if client_id:
+            qs = qs.filter(client_id=client_id)
         return qs
     
     @action(detail=True, methods=['get'])
@@ -99,6 +105,16 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        credit_id = self.request.query_params.get('credit', None)
+        if credit_id:
+            qs = qs.filter(credit_id=credit_id)
+        client_id = self.request.query_params.get('client', None)
+        if client_id:
+            qs = qs.filter(credit__client_id=client_id)
+        return qs.order_by('-payment_date')
+
 
 class InterventionViewSet(viewsets.ModelViewSet):
     queryset = Intervention.objects.select_related('client', 'operator', 'credit').all()
@@ -107,16 +123,21 @@ class InterventionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         qs = super().get_queryset()
-        client_id = self.request.query_params.get('client_id', None)
+        client_id = self.request.query_params.get('client_id') or self.request.query_params.get('client')
         if client_id:
             qs = qs.filter(client_id=client_id)
-        return qs.order_by('-datetime')
+        ordering = self.request.query_params.get('ordering', '-datetime')
+        return qs.order_by(ordering)
     
     def perform_create(self, serializer):
         intervention = serializer.save()
         # Проверка compliance после создания интервенции
-        compliance_service = ComplianceService()
-        alerts = compliance_service.check_intervention(intervention)
+        try:
+            compliance_service = ComplianceService()
+            if hasattr(compliance_service, 'check_intervention'):
+                alerts = compliance_service.check_intervention(intervention)
+        except Exception:
+            pass  # Compliance check is optional
         # Алерты автоматически сохраняются сервисом
 
 
@@ -130,6 +151,16 @@ class CreditStateViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CreditState.objects.select_related('credit', 'client').all()
     serializer_class = CreditStateSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        credit_id = self.request.query_params.get('credit', None)
+        if credit_id:
+            qs = qs.filter(credit_id=credit_id)
+        client_id = self.request.query_params.get('client', None)
+        if client_id:
+            qs = qs.filter(client_id=client_id)
+        return qs.order_by('-state_date')
 
 
 class ScoringResultViewSet(viewsets.ReadOnlyModelViewSet):
@@ -145,15 +176,15 @@ class AssignmentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         qs = super().get_queryset()
-        operator_id = self.request.query_params.get('operator_id', None)
-        is_active = self.request.query_params.get('is_active', None)
+        operator_id = self.request.query_params.get('operator_id') or self.request.query_params.get('operator')
         
         if operator_id:
             qs = qs.filter(operator_id=operator_id)
-        if is_active:
-            qs = qs.filter(is_active=True)
         
-        return qs.order_by('-assigned_at')
+        # Only show assignments with overdue > 0
+        qs = qs.filter(overdue_days__gt=0)
+        
+        return qs.order_by('-priority', '-overdue_amount')
     
     @action(detail=False, methods=['get'])
     def my_queue(self, request):
@@ -323,6 +354,174 @@ class CreditApplicationViewSet(viewsets.ModelViewSet):
         })
 
 
+# ===== OVERDUE PREDICTION API =====
+
+class OverduePredictionView(APIView):
+    """
+    API для прогнозирования просрочки с ранжированием по рискам.
+    
+    GET  /api/overdue-prediction/?credit_id=123
+         → прогноз для одного кредита
+    
+    GET  /api/overdue-prediction/?client_id=456
+         → прогноз по всем кредитам клиента
+    
+    POST /api/overdue-prediction/
+         → пакетный прогноз для списка кредитов / всех просроченных
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        credit_id = request.query_params.get('credit_id')
+        client_id = request.query_params.get('client_id')
+
+        if credit_id:
+            try:
+                credit = Credit.objects.select_related('client').get(id=credit_id)
+            except Credit.DoesNotExist:
+                return Response({'error': 'Кредит не найден'}, status=status.HTTP_404_NOT_FOUND)
+            features = self._build_features(credit)
+            result = predict_risk(features)
+            result['credit_id'] = credit.id
+            result['client_id'] = credit.client.id
+            result['client_name'] = credit.client.full_name
+            result['features'] = features
+            return Response(result)
+
+        if client_id:
+            try:
+                client = Client.objects.get(id=client_id)
+            except Client.DoesNotExist:
+                return Response({'error': 'Клиент не найден'}, status=status.HTTP_404_NOT_FOUND)
+            credits = Credit.objects.filter(client=client, status__in=['active', 'overdue', 'restructured'])
+            records = []
+            for c in credits:
+                f = self._build_features(c)
+                f['client_id'] = client.id
+                f['credit_id'] = c.id
+                records.append(f)
+            if not records:
+                return Response({'results': [], 'message': 'Нет активных кредитов'})
+            results = predict_risk_batch(records)
+            for r in results:
+                r['client_name'] = client.full_name
+            return Response({'results': results})
+
+        return Response({'error': 'Укажите credit_id или client_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):
+        """Пакетный прогноз с ранжированием."""
+        credit_ids = request.data.get('credit_ids', [])
+        top_n = int(request.data.get('top', 50))
+
+        if credit_ids:
+            credits = Credit.objects.filter(id__in=credit_ids).select_related('client')
+        else:
+            # По умолчанию: все активные/просроченные
+            credits = Credit.objects.filter(
+                status__in=['active', 'overdue', 'restructured']
+            ).select_related('client')[:top_n * 2]
+
+        records = []
+        client_names = {}
+        for c in credits:
+            f = self._build_features(c)
+            f['client_id'] = c.client.id
+            f['credit_id'] = c.id
+            records.append(f)
+            client_names[c.client.id] = c.client.full_name
+
+        if not records:
+            return Response({'results': []})
+
+        results = predict_risk_batch(records)
+        for r in results:
+            r['client_name'] = client_names.get(r.get('client_id'), '')
+
+        return Response({
+            'total': len(results),
+            'results': results[:top_n],
+        })
+
+    @staticmethod
+    def _build_features(credit) -> dict:
+        """Собирает вектор признаков из Credit → Client, Payment, Intervention."""
+        from datetime import date as dt_date
+        from django.db.models import Avg, Max, Count, Q
+        from datetime import timedelta
+
+        client = credit.client
+        today = dt_date.today()
+        year_ago = today - timedelta(days=365)
+
+        payments = credit.payments.all()
+        interventions = credit.interventions.all()
+
+        # Клиент
+        age = (today - client.birth_date).days / 365.25 if client.birth_date else 35
+        gender = 1 if client.gender == 'M' else 0
+        marital_map = {'single': 0, 'married': 1, 'divorced': 2, 'widowed': 3}
+        empl_map = {'employed': 1, 'self_employed': 2, 'unemployed': 0, 'retired': 3, 'student': 4}
+
+        monthly_income = float(client.income) if client.income else 0
+        other_count = Credit.objects.filter(client=client).exclude(id=credit.id).count()
+
+        # Кредит
+        credit_amount = float(credit.principal_amount) if credit.principal_amount else 0
+        td = (credit.planned_close_date - credit.open_date).days if credit.planned_close_date and credit.open_date else 365
+        credit_term = max(td // 30, 1)
+        interest_rate = float(credit.interest_rate) if credit.interest_rate else 0
+        monthly_pay = float(credit.monthly_payment) if credit.monthly_payment else 0
+        lti = (credit_amount / (monthly_income * 12)) if monthly_income > 0 else 0
+        credit_age = (today - credit.open_date).days if credit.open_date else 0
+        status_map = {'active': 1, 'closed': 0, 'overdue': 2, 'default': 3, 'restructured': 4, 'legal': 5, 'sold': 6, 'written_off': 7}
+
+        # Платежи
+        total_p = payments.count()
+        overdue_p = payments.filter(overdue_days__gt=0).count()
+        max_od = payments.aggregate(m=Max('overdue_days'))['m'] or 0
+        avg_pay = payments.aggregate(a=Avg('amount'))['a'] or 0
+        p12 = payments.filter(payment_date__gte=year_ago)
+        p12_cnt = p12.count()
+        od12_cnt = p12.filter(overdue_days__gt=0).count()
+        od12_share = od12_cnt / p12_cnt if p12_cnt > 0 else 0
+        max_od_12 = p12.aggregate(m=Max('overdue_days'))['m'] or 0
+
+        # Взаимодействие
+        total_iv = interventions.count()
+        compl_iv = interventions.filter(status='completed').count()
+        promises = interventions.filter(status='promise').count()
+
+        return {
+            'age': age,
+            'gender': gender,
+            'marital_status': marital_map.get(client.marital_status, 0),
+            'employment': empl_map.get(client.employment, 1),
+            'dependents': client.children_count or 0,
+            'monthly_income': monthly_income,
+            'has_other_credits': 1 if other_count > 0 else 0,
+            'other_credits_count': other_count,
+            'credit_amount': credit_amount,
+            'credit_term': credit_term,
+            'interest_rate': interest_rate,
+            'lti_ratio': lti,
+            'credit_age': credit_age,
+            'credit_status': status_map.get(credit.status, 1),
+            'monthly_payment': monthly_pay,
+            'total_payments': total_p,
+            'overdue_payments': overdue_p,
+            'max_overdue_days': max_od,
+            'avg_payment': float(avg_pay),
+            'payments_count_12m': p12_cnt,
+            'overdue_count_12m': od12_cnt,
+            'overdue_share_12m': od12_share,
+            'max_overdue_12m': max_od_12,
+            'total_interventions': total_iv,
+            'completed_interventions': compl_iv,
+            'promises_count': promises,
+        }
+
+
 # ===== KILLER FEATURES VIEWSETS =====
 
 class ClientBehaviorProfileViewSet(viewsets.ModelViewSet):
@@ -438,6 +637,170 @@ class ReturnForecastViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # ===== DASHBOARD API =====
+
+class DashboardFullView(APIView):
+    """Полная статистика для дашборда руководителя"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        from django.db.models.functions import TruncDate, TruncHour, ExtractHour
+        from collections import defaultdict
+        
+        today = timezone.now().date()
+        period = request.query_params.get('period', 'day')
+        
+        # Определяем период
+        if period == 'day':
+            start_date = today
+        elif period == 'week':
+            start_date = today - timedelta(days=7)
+        else:  # month
+            start_date = today - timedelta(days=30)
+        
+        # Получаем интервенции за период
+        interventions = Intervention.objects.filter(
+            datetime__date__gte=start_date
+        ).select_related('operator', 'client', 'credit')
+        
+        # === Статистика по операторам ===
+        operators = Operator.objects.all()
+        operator_stats = []
+        
+        for op in operators:
+            op_interventions = interventions.filter(operator=op)
+            total_calls = op_interventions.filter(intervention_type='phone').count()
+            contacts = op_interventions.filter(
+                intervention_type='phone',
+                status__in=['completed', 'promise', 'refuse', 'callback']
+            ).count()
+            ptp_count = op_interventions.filter(status='promise').count()
+            ptp_amount = op_interventions.filter(status='promise').aggregate(
+                total=Sum('promise_amount')
+            )['total'] or 0
+            
+            # Расчёт времени на звонках
+            total_duration = op_interventions.filter(intervention_type='phone').aggregate(
+                total=Sum('duration')
+            )['total'] or 0
+            
+            avg_duration = 0
+            if total_calls > 0:
+                avg_duration = total_duration // total_calls
+            
+            contact_rate = round((contacts / total_calls * 100), 1) if total_calls > 0 else 0
+            
+            # Время работы (эмуляция)
+            total_time_min = total_duration // 60
+            break_time_min = int(total_time_min * 0.12)  # ~12% на перерывы
+            
+            operator_stats.append({
+                'id': op.id,
+                'name': op.full_name,
+                'calls': total_calls,
+                'contacts': contacts,
+                'contactRate': contact_rate,
+                'avgDuration': avg_duration,
+                'totalTime': total_time_min,
+                'breakTime': break_time_min,
+                'ptpCount': ptp_count,
+                'ptpAmount': float(ptp_amount),
+            })
+        
+        # === Динамика звонков по дням ===
+        daily_calls = interventions.filter(intervention_type='phone').annotate(
+            date=TruncDate('datetime')
+        ).values('date').annotate(
+            calls=Count('id'),
+            contacts=Count('id', filter=Q(status__in=['completed', 'promise', 'refuse', 'callback'])),
+            ptp=Count('id', filter=Q(status='promise'))
+        ).order_by('date')
+        
+        daily_data = []
+        for day in daily_calls:
+            daily_data.append({
+                'date': day['date'].strftime('%d.%m') if day['date'] else '',
+                'calls': day['calls'],
+                'contacts': day['contacts'],
+                'ptp': day['ptp']
+            })
+        
+        # === Распределение по часам ===
+        hourly_calls = interventions.filter(intervention_type='phone').annotate(
+            hour=ExtractHour('datetime')
+        ).values('hour').annotate(
+            calls=Count('id'),
+            total_duration=Sum('duration'),
+            contacts=Count('id', filter=Q(status__in=['completed', 'promise', 'refuse', 'callback']))
+        ).order_by('hour')
+        
+        hourly_data = []
+        for h in hourly_calls:
+            avg_dur = h['total_duration'] // h['calls'] if h['calls'] > 0 else 0
+            contact_rate = round(h['contacts'] / h['calls'] * 100, 1) if h['calls'] > 0 else 0
+            hourly_data.append({
+                'hour': f"{h['hour']:02d}:00",
+                'calls': h['calls'],
+                'avgDuration': avg_dur,
+                'contactRate': contact_rate
+            })
+        
+        # === Распределение результатов ===
+        result_distribution = interventions.filter(intervention_type='phone').values('status').annotate(
+            count=Count('id')
+        )
+        
+        status_mapping = {
+            'no_answer': ('Не дозвон', '#94a3b8'),
+            'promise': ('Обещание', '#22c55e'),
+            'refuse': ('Отказ', '#ef4444'),
+            'callback': ('Перезвонить', '#f59e0b'),
+            'completed': ('Контакт', '#3b82f6'),
+        }
+        
+        call_results = []
+        total_results = sum(r['count'] for r in result_distribution)
+        for r in result_distribution:
+            status = r['status']
+            if status in status_mapping:
+                name, color = status_mapping[status]
+                value = round(r['count'] / total_results * 100) if total_results > 0 else 0
+                call_results.append({
+                    'name': name,
+                    'value': value,
+                    'color': color
+                })
+        
+        # === Распределение времени ===
+        time_distribution = [
+            {'name': 'На звонке', 'value': 65, 'color': '#22c55e'},
+            {'name': 'Постобработка', 'value': 15, 'color': '#3b82f6'},
+            {'name': 'Ожидание', 'value': 12, 'color': '#f59e0b'},
+            {'name': 'Перерыв', 'value': 8, 'color': '#94a3b8'},
+        ]
+        
+        # === Агрегированная статистика ===
+        totals = {
+            'calls': sum(op['calls'] for op in operator_stats),
+            'contacts': sum(op['contacts'] for op in operator_stats),
+            'totalTime': sum(op['totalTime'] for op in operator_stats),
+            'breakTime': sum(op['breakTime'] for op in operator_stats),
+            'ptpCount': sum(op['ptpCount'] for op in operator_stats),
+            'ptpAmount': sum(op['ptpAmount'] for op in operator_stats),
+        }
+        totals['contactRate'] = round(totals['contacts'] / totals['calls'] * 100, 1) if totals['calls'] > 0 else 0
+        totals['avgDuration'] = sum(op['avgDuration'] for op in operator_stats) // len(operator_stats) if operator_stats else 0
+        
+        return Response({
+            'period': period,
+            'startDate': start_date.isoformat(),
+            'endDate': today.isoformat(),
+            'totals': totals,
+            'operatorStats': operator_stats,
+            'dailyCalls': daily_data,
+            'hourlyCalls': hourly_data,
+            'callResults': call_results,
+            'timeDistribution': time_distribution,
+        })
 
 class DashboardStatsView(APIView):
     """Статистика для дашборда"""

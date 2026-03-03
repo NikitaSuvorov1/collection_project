@@ -28,7 +28,9 @@ class CreditStateSerializer(serializers.ModelSerializer):
 
 class CreditSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.full_name', read_only=True)
+    client_phone = serializers.CharField(source='client.phone_mobile', read_only=True)
     latest_state = serializers.SerializerMethodField()
+    term_months = serializers.SerializerMethodField()
     
     class Meta:
         model = Credit
@@ -38,6 +40,13 @@ class CreditSerializer(serializers.ModelSerializer):
         state = obj.states.order_by('-state_date').first()
         if state:
             return CreditStateSerializer(state).data
+        return None
+
+    def get_term_months(self, obj):
+        if obj.open_date and obj.planned_close_date:
+            delta = obj.planned_close_date - obj.open_date
+            months = round(delta.days / 30.44)
+            return months if months > 0 else None
         return None
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -62,10 +71,36 @@ class AssignmentSerializer(serializers.ModelSerializer):
     operator_name = serializers.CharField(source='operator.full_name', read_only=True)
     client_name = serializers.CharField(source='credit.client.full_name', read_only=True)
     client_phone = serializers.CharField(source='credit.client.phone_mobile', read_only=True)
+    client_id = serializers.IntegerField(source='credit.client.id', read_only=True)
+    last_promise_amount = serializers.SerializerMethodField()
+    last_promise_date = serializers.SerializerMethodField()
+    total_attempts = serializers.SerializerMethodField()
     
     class Meta:
         model = Assignment
         fields = '__all__'
+    
+    def get_last_promise_amount(self, obj):
+        from collection_app.models import Intervention
+        last = Intervention.objects.filter(
+            credit=obj.credit, status='promise'
+        ).order_by('-datetime').first()
+        if last and last.promise_amount:
+            return float(last.promise_amount)
+        return None
+    
+    def get_last_promise_date(self, obj):
+        from collection_app.models import Intervention
+        last = Intervention.objects.filter(
+            credit=obj.credit, status='promise'
+        ).order_by('-datetime').first()
+        if last and last.promise_date:
+            return str(last.promise_date)
+        return None
+    
+    def get_total_attempts(self, obj):
+        from collection_app.models import Intervention
+        return Intervention.objects.filter(credit=obj.credit).count()
 
 class CreditApplicationSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.full_name', read_only=True)

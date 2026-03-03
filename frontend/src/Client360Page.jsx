@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 
 // ===== MOCK DATA =====
-const USE_MOCK = true; // Переключатель на реальное API
+const USE_MOCK = false; // Переключатель на реальное API
 
 const MOCK_CLIENT = {
   id: 1,
@@ -141,7 +141,7 @@ const MOCK_SCRIPTS = [
 ];
 
 // ===== API =====
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = 'http://127.0.0.1:8000/api';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('authToken');
@@ -155,9 +155,7 @@ async function fetchClient360(clientId) {
   if (USE_MOCK) {
     return Promise.resolve({ ...MOCK_CLIENT, id: clientId });
   }
-  const response = await fetch(`${API_BASE}/clients/${clientId}/profile_360/`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await fetch(`${API_BASE}/clients/${clientId}/profile_360/`);
   if (!response.ok) throw new Error('Failed to fetch client profile');
   return response.json();
 }
@@ -173,9 +171,7 @@ async function fetchSmartScripts(psychotype = '') {
   if (psychotype && psychotype !== 'unknown') {
     params.append('psychotype', psychotype);
   }
-  const response = await fetch(`${API_BASE}/scripts/?${params}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await fetch(`${API_BASE}/scripts/?${params}`);
   if (!response.ok) throw new Error('Failed to fetch scripts');
   return response.json();
 }
@@ -186,7 +182,6 @@ async function executeNBA(nbaId) {
   }
   const response = await fetch(`${API_BASE}/nba/${nbaId}/execute/`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Failed to execute NBA');
   return response.json();
@@ -198,7 +193,6 @@ async function skipNBA(nbaId) {
   }
   const response = await fetch(`${API_BASE}/nba/${nbaId}/skip/`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Failed to skip NBA');
   return response.json();
@@ -254,6 +248,7 @@ function getResultBadge(result) {
     callback: { label: 'Перезвонить', color: '#f59e0b', bg: '#fef3c7' },
     refuse: { label: 'Отказ', color: '#ef4444', bg: '#fee2e2' },
     promise: { label: 'Обещание', color: '#22c55e', bg: '#dcfce7' },
+    completed: { label: 'Завершено', color: '#22c55e', bg: '#dcfce7' },
     partial_payment: { label: 'Частичная оплата', color: '#3b82f6', bg: '#dbeafe' },
     full_payment: { label: 'Полная оплата', color: '#22c55e', bg: '#dcfce7' },
   };
@@ -261,12 +256,12 @@ function getResultBadge(result) {
 }
 
 function getChannelIcon(channel) {
-  const icons = { phone: '📞', sms: '✉️', whatsapp: '💬', email: '📧', push: '🔔' };
+  const icons = { phone: '📞', sms: '✉️', whatsapp: '💬', email: '📧', push: '🔔', letter: '✉️', visit: '🚶' };
   return icons[channel] || '📞';
 }
 
 function getChannelLabel(channel) {
-  const labels = { phone: 'Телефон', sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', push: 'Push' };
+  const labels = { phone: 'Телефон', sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', push: 'Push', letter: 'Письмо', visit: 'Визит' };
   return labels[channel] || channel;
 }
 
@@ -615,7 +610,7 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
 export default function Client360Page({ clientId, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [copiedPhrase, setCopiedPhrase] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!clientId);
   const [error, setError] = useState(null);
   
   // Данные клиента
@@ -675,6 +670,22 @@ export default function Client360Page({ clientId, onBack }) {
       console.error('Failed to skip NBA:', err);
     }
   };
+
+  if (!clientId) {
+    return (
+      <div className="client-360-page error">
+        <header className="client-360-header">
+          <button className="btn ghost" onClick={onBack}>← Назад</button>
+          <div className="client-main-info">
+            <h1>360° Профиль клиента</h1>
+          </div>
+        </header>
+        <div className="error-message" style={{textAlign:'center',padding:'60px 40px',color:'#737373'}}>
+          Выберите клиента из рабочего стола оператора, нажав кнопку «👤 360° профиль»
+        </div>
+      </div>
+    );
+  }
   
   if (loading) {
     return (
@@ -735,10 +746,10 @@ export default function Client360Page({ clientId, onBack }) {
             <span>{client.phone_mobile}</span>
             <span>•</span>
             <span>{client.city}</span>
-            {client.employer && (
+            {(client.employer_name || client.employer) && (
               <>
                 <span>•</span>
-                <span>{client.employer}</span>
+                <span>{client.employer_name || client.employer}</span>
               </>
             )}
           </div>
@@ -791,12 +802,13 @@ export default function Client360Page({ clientId, onBack }) {
                 {credits.map(credit => {
                   const state = credit.latest_state;
                   const debt = Number(state?.principal_debt || 0);
-                  const overdueDays = state?.dpd || 0;
+                  const overdueDays = state?.overdue_days || state?.dpd || 0;
+                  const productLabels = { consumer: 'Потребительский кредит', mortgage: 'Ипотека', car: 'Автокредит', credit_card: 'Кредитная карта', microloan: 'Микрозайм' };
                   
                   return (
                     <div key={credit.id} className="credit-mini">
                       <div className="credit-mini-header">
-                        <span>{credit.product_type || 'Кредит'}</span>
+                        <span>{productLabels[credit.product_type] || credit.product_type || 'Кредит'}</span>
                         <span className={`risk-badge risk-${credit.risk_segment || 'medium'}`}>
                           {credit.risk_segment || 'medium'}
                         </span>
@@ -959,11 +971,11 @@ export default function Client360Page({ clientId, onBack }) {
               <tbody>
                 {interventions.length > 0 ? (
                   interventions.map((intervention, i) => {
-                    const badge = getResultBadge(intervention.result);
+                    const badge = getResultBadge(intervention.status || intervention.result);
                     return (
                       <tr key={i}>
                         <td>{formatDateTime(intervention.datetime)}</td>
-                        <td>{getChannelIcon(intervention.channel)} {getChannelLabel(intervention.channel)}</td>
+                        <td>{getChannelIcon(intervention.intervention_type || intervention.channel)} {getChannelLabel(intervention.intervention_type || intervention.channel)}</td>
                         <td>
                           <span style={{ background: badge.bg, color: badge.color, padding: '2px 8px', borderRadius: 4 }}>
                             {badge.label}

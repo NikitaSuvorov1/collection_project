@@ -1,17 +1,37 @@
-"""Stub for overdue scoring model.
+"""
+Фасад (facade) для модуля прогнозирования просрочки.
 
-Replace the contents of `score_client` with a real model inference.
+Предоставляет простой интерфейс `score_client(client_data) -> float`,
+внутренне делегируя вызов обученной модели OverdueRiskModel
+(см. overdue_predictor.py).
+
+Если модель не обучена — используется rule-based эвристика
+(обратная совместимость).
 """
 
-def score_client(client_data: dict) -> float:
-    """Return probability of becoming overdue between 0 and 1.
+from typing import Dict, Any
+from .overdue_predictor import get_model
 
-    client_data is a dict containing client features. This stub returns a
-    simple heuristic based on absent phone/email.
+
+def score_client(client_data: Dict[str, Any]) -> float:
     """
-    score = 0.05
-    if not client_data.get('phone'):
-        score += 0.2
-    if not client_data.get('email'):
-        score += 0.1
-    return min(max(score, 0.0), 1.0)
+    Возвращает оценку вероятности просрочки для клиента (0..1).
+
+    Параметры client_data могут содержать как сырые поля клиента
+    (phone, email, income, …), так и расчётные признаки модели
+    (overdue_share_12m, max_overdue_days, lti_ratio, …).
+
+    Если переданы расчётные признаки — используется ML-модель.
+    Если только базовые — применяется простой rule-based скоринг.
+    """
+    model = get_model()
+    result = model.predict(client_data)
+    return result['risk_score']
+
+
+def score_client_full(client_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Полный результат скоринга: категория, вероятности, risk_score.
+    """
+    model = get_model()
+    return model.predict(client_data)

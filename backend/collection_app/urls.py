@@ -26,7 +26,11 @@ urlpatterns = [
     path('api-token-auth/', drf_views.obtain_auth_token),
     
     # Dashboard endpoints
+    path('dashboard/', views.DashboardFullView.as_view(), name='dashboard-full'),
     path('dashboard/stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
     path('dashboard/operator/', views.OperatorStatsView.as_view(), name='operator-stats'),
     path('dashboard/operator/<int:operator_id>/', views.OperatorStatsView.as_view(), name='operator-stats-detail'),
+    
+    # ML prediction endpoints
+    path('overdue-prediction/', views.OverduePredictionView.as_view(), name='overdue-prediction'),
 ]

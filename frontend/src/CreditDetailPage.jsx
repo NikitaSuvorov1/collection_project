@@ -19,6 +19,13 @@ const STATUS_LABELS = {
   'restructured': 'Реструктуризация',
 };
 
+const PAYMENT_TYPE_LABELS = {
+  'regular': 'Регулярный',
+  'early': 'Досрочный',
+  'partial': 'Частичный',
+  'penalty': 'Штраф',
+};
+
 function formatCurrency(v) { 
   return Number(v || 0).toLocaleString('ru-RU', { style: 'currency', currency: 'RUB' }); 
 }
@@ -79,7 +86,7 @@ export default function CreditDetailPage({ creditId, onBack }) {
 
       // Загружаем взаимодействия с клиентом
       if (creditData.client) {
-        const interactionsRes = await fetch(`${API_URL}/interactions/?client=${creditData.client}`);
+        const interactionsRes = await fetch(`${API_URL}/interventions/?client=${creditData.client}`);
         if (interactionsRes.ok) {
           const interactionsData = await interactionsRes.json();
           setInteractions(Array.isArray(interactionsData) ? interactionsData : interactionsData.results || []);
@@ -115,7 +122,7 @@ export default function CreditDetailPage({ creditId, onBack }) {
   }
 
   const latestState = creditStates.length > 0 
-    ? creditStates.sort((a, b) => new Date(b.report_date) - new Date(a.report_date))[0] 
+    ? creditStates.sort((a, b) => new Date(b.state_date) - new Date(a.state_date))[0] 
     : null;
 
   const isOverdue = ['overdue', 'default'].includes(credit.status);
@@ -155,11 +162,12 @@ export default function CreditDetailPage({ creditId, onBack }) {
             {client ? (
               <table style={{width:'100%', fontSize:'0.875rem'}}>
                 <tbody>
-                  <tr><td style={{color:'#737373', padding:'6px 0', width:'45%'}}>ФИО</td><td style={{color:'#1a1a1a'}}>{[client.last_name, client.first_name, client.middle_name].filter(Boolean).join(' ') || '—'}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Телефон</td><td style={{color:'#1a1a1a'}}>{client.phone || '—'}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Email</td><td style={{color:'#1a1a1a'}}>{client.email || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0', width:'45%'}}>ФИО</td><td style={{color:'#1a1a1a'}}>{client.full_name || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Телефон</td><td style={{color:'#1a1a1a'}}>{client.phone_mobile || client.phone_work || '—'}</td></tr>
                   <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата рождения</td><td style={{color:'#1a1a1a'}}>{formatDate(client.birth_date)}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Адрес</td><td style={{color:'#1a1a1a'}}>{client.address || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Город</td><td style={{color:'#1a1a1a'}}>{client.city || client.region || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Место работы</td><td style={{color:'#1a1a1a'}}>{client.employer_name || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Доход</td><td style={{color:'#1a1a1a'}}>{client.income ? formatCurrency(client.income) : '—'}</td></tr>
                 </tbody>
               </table>
             ) : (
@@ -177,10 +185,11 @@ export default function CreditDetailPage({ creditId, onBack }) {
             <table style={{width:'100%', fontSize:'0.875rem'}}>
               <tbody>
                 <tr><td style={{color:'#737373', padding:'6px 0', width:'50%'}}>Сумма</td><td style={{color:'#1a1a1a', fontWeight:500}}>{formatCurrency(credit.principal_amount)}</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Ставка</td><td style={{color:'#1a1a1a'}}>{credit.interest_rate}% годовых</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Срок</td><td style={{color:'#1a1a1a'}}>{credit.term_months} мес.</td></tr>
+                <tr><td style={{color:'#737373', padding:'6px 0'}}>Ставка</td><td style={{color:'#1a1a1a'}}>{Number(credit.interest_rate || 0).toFixed(2)}% годовых</td></tr>
+                <tr><td style={{color:'#737373', padding:'6px 0'}}>Срок</td><td style={{color:'#1a1a1a'}}>{credit.term_months ? `${credit.term_months} мес.` : '—'}</td></tr>
                 <tr><td style={{color:'#737373', padding:'6px 0'}}>Ежемесячный платёж</td><td style={{color:'#1a1a1a', fontWeight:500}}>{formatCurrency(credit.monthly_payment)}</td></tr>
                 <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата выдачи</td><td style={{color:'#1a1a1a'}}>{formatDate(credit.open_date)}</td></tr>
+                <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата окончания</td><td style={{color:'#1a1a1a'}}>{formatDate(credit.planned_close_date)}</td></tr>
               </tbody>
             </table>
           </div>
@@ -193,25 +202,29 @@ export default function CreditDetailPage({ creditId, onBack }) {
           <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
             <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
               Текущее состояние
-              {latestState.report_date && <span style={{fontWeight:400, marginLeft:8}}>на {formatDate(latestState.report_date)}</span>}
+              {latestState.state_date && <span style={{fontWeight:400, marginLeft:8}}>на {formatDate(latestState.state_date)}</span>}
             </h2>
           </div>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)'}}>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(5, 1fr)'}}>
             <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Остаток долга</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color:'#1a1a1a'}}>{formatCurrency(latestState.current_balance)}</div>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Основной долг</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color:'#1a1a1a'}}>{formatCurrency(latestState.principal_debt)}</div>
             </div>
             <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просрочка</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: latestState.overdue_amount > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.overdue_amount)}</div>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. основной</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.overdue_principal)}</div>
             </div>
             <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Дней просрочки</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: latestState.days_past_due > 0 ? '#b91c1c' : '#1a1a1a'}}>{latestState.days_past_due ?? 0}</div>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. проценты</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.overdue_interest)}</div>
+            </div>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Штрафы / пени</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.penalties)}</div>
             </div>
             <div style={{padding:'24px 40px'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Bucket</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color:'#1a1a1a'}}>{latestState.bucket || '0'}</div>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Дней просрочки</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: latestState.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>{latestState.overdue_days ?? 0}</div>
             </div>
           </div>
         </div>
@@ -235,9 +248,9 @@ export default function CreditDetailPage({ creditId, onBack }) {
             <tbody>
               {interactions.slice(0, 10).map((item, idx) => (
                 <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.interaction_date)}</td>
-                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.interaction_type}</td>
-                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.result}</td>
+                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.datetime)}</td>
+                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.intervention_type === 'phone' ? 'Звонок' : item.intervention_type === 'sms' ? 'СМС' : item.intervention_type === 'email' ? 'Email' : item.intervention_type === 'letter' ? 'Письмо' : item.intervention_type === 'visit' ? 'Визит' : item.intervention_type}</td>
+                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.status === 'completed' ? 'Завершено' : item.status === 'no_answer' ? 'Не дозвон' : item.status === 'promise' ? 'Обещание' : item.status === 'refuse' ? 'Отказ' : item.status === 'callback' ? 'Перезвонить' : item.status}</td>
                   <td style={{padding:'10px 40px', color:'#737373'}}>{item.notes || '—'}</td>
                 </tr>
               ))}
@@ -268,7 +281,7 @@ export default function CreditDetailPage({ creditId, onBack }) {
                 <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
                   <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.payment_date)}</td>
                   <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a', fontWeight:500}}>{formatCurrency(item.amount)}</td>
-                  <td style={{padding:'10px 20px', color:'#525252'}}>{item.payment_type}</td>
+                  <td style={{padding:'10px 20px', color:'#525252'}}>{PAYMENT_TYPE_LABELS[item.payment_type] || item.payment_type}</td>
                   <td style={{padding:'10px 40px', color:'#525252'}}>{item.status === 'completed' ? 'Исполнен' : item.status}</td>
                 </tr>
               ))}
@@ -289,24 +302,28 @@ export default function CreditDetailPage({ creditId, onBack }) {
             <thead>
               <tr style={{background:'#fafafa'}}>
                 <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Остаток</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просрочка</th>
-                <th style={{textAlign:'center', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
-                <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Bucket</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
+                <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
               </tr>
             </thead>
             <tbody>
-              {creditStates.slice(0, 15).map((item, idx) => (
+              {creditStates.slice(0, 20).map((item, idx) => (
                 <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.report_date)}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.current_balance)}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color: item.overdue_amount > 0 ? '#b91c1c' : '#1a1a1a'}}>
-                    {formatCurrency(item.overdue_amount)}
+                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    {formatCurrency(item.overdue_principal)}
                   </td>
-                  <td style={{padding:'10px 20px', textAlign:'center', color: item.days_past_due > 0 ? '#b91c1c' : '#1a1a1a'}}>
-                    {item.days_past_due ?? 0}
+                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    {formatCurrency(item.overdue_interest)}
                   </td>
-                  <td style={{padding:'10px 40px', textAlign:'center', color:'#1a1a1a'}}>{item.bucket || '0'}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
+                  <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    {item.overdue_days ?? 0}
+                  </td>
                 </tr>
               ))}
             </tbody>

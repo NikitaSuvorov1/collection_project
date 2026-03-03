@@ -7,6 +7,7 @@ import LoginPage from './LoginPage'
 import DashboardPage from './DashboardPage'
 import Client360Page from './Client360Page'
 import LoanPredictionPage from './LoanPredictionPage'
+import OverduePredictionPage from './OverduePredictionPage'
 import DatabaseViewPage from './DatabaseViewPage'
 import './styles.css'
 
@@ -34,6 +35,7 @@ function Root() {
   });
   const [page, setPage] = useState('desk');
   const [creditId, setCreditId] = useState(null);
+  const [client360Id, setClient360Id] = useState(null);
 
   // Update last activity in localStorage
   const updateActivity = useCallback(() => {
@@ -105,23 +107,26 @@ function Root() {
     setPage('desk');
   };
 
-  const handleCreditClick = (id) => {
+  const handleCreditClick = (id, fromPage) => {
     setCreditId(id);
+    setPrevPage(fromPage || page);
     setPage('creditDetail');
   };
 
+  const [prevPage, setPrevPage] = useState('credits');
+
   const handleBackToCredits = () => {
     setCreditId(null);
-    setPage('credits');
+    setPage(prevPage);
   };
 
   const handleClient360 = (clientId) => {
-    setCreditId(clientId); // reuse for clientId
+    setClient360Id(clientId);
     setPage('client360');
   };
 
   const handleBackFromClient360 = () => {
-    setCreditId(null);
+    setClient360Id(null);
     setPage('desk');
   };
 
@@ -136,20 +141,23 @@ function Root() {
       <nav style={{maxWidth:1400,margin:'16px auto',display:'flex',gap:12,alignItems:'center',padding:'0 16px'}}>
         <button className={`btn ${page === 'desk' ? '' : 'ghost'}`} onClick={() => setPage('desk')}>🏠 Рабочий стол</button>
         <button className={`btn ${page === 'credits' ? '' : 'ghost'}`} onClick={() => setPage('credits')}>💳 Кредиты</button>
-        <button className={`btn ${page === 'client360' ? '' : 'ghost'}`} onClick={() => handleClient360(1)}>👤 360° Клиент</button>
+        <button className={`btn ${page === 'client360' ? '' : 'ghost'}`} onClick={() => setPage('client360')}>👤 360° Клиент</button>
         <button className={`btn ${page === 'prediction' ? '' : 'ghost'}`} onClick={() => setPage('prediction')}>🔮 Скоринг</button>
+        <button className={`btn ${page === 'overdue' ? '' : 'ghost'}`} onClick={() => setPage('overdue')}>⚠️ Просрочка</button>
         <button className={`btn ${page === 'database' ? '' : 'ghost'}`} onClick={() => setPage('database')}>🗄️ База данных</button>
         {isManager && <button className={`btn ${page === 'dashboard' ? '' : 'ghost'}`} onClick={() => setPage('dashboard')}>📊 Дашборд</button>}
         <div style={{flex:1}} />
         <span className="muted" style={{fontSize:13}}>{user.name} ({user.role === 'manager' ? 'Руководитель' : 'Оператор'})</span>
         <button className="btn small ghost" onClick={handleLogout}>Выход</button>
       </nav>
-      {page === 'desk' && <Desk onClient360={handleClient360} />}
+      {page === 'desk' && <Desk user={user} onClient360={handleClient360} onCreditClick={(id) => handleCreditClick(id, 'desk')} />}
       {page === 'credits' && <CreditsPage onCreditClick={handleCreditClick} />}
       {page === 'creditDetail' && creditId && <CreditDetailPage creditId={creditId} onBack={handleBackToCredits} />}
+      {page === 'creditDetailFromDesk' && creditId && <CreditDetailPage creditId={creditId} onBack={() => { setCreditId(null); setPage('desk'); }} />}
       {page === 'dashboard' && isManager && <DashboardPage />}
-      {page === 'client360' && <Client360Page clientId={creditId} onBack={handleBackFromClient360} />}
+      {page === 'client360' && <Client360Page clientId={client360Id} onBack={handleBackFromClient360} />}
       {page === 'prediction' && <LoanPredictionPage />}
+      {page === 'overdue' && <OverduePredictionPage />}
       {page === 'database' && <DatabaseViewPage />}
     </div>
   )

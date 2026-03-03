@@ -1,20 +1,149 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+
+
+# =====================================================
+# RBAC - Роли и разрешения
+# =====================================================
+
+class Role(models.Model):
+    """Роли пользователей системы"""
+    ROLE_CHOICES = [
+        ('admin', 'Администратор'),
+        ('manager', 'Менеджер'),
+        ('senior_operator', 'Старший оператор'),
+        ('operator', 'Оператор'),
+        ('legal_specialist', 'Юрист'),
+        ('analyst', 'Аналитик'),
+        ('auditor', 'Аудитор'),
+    ]
+    
+    name = models.CharField('Код роли', max_length=50, unique=True, choices=ROLE_CHOICES)
+    display_name = models.CharField('Отображаемое имя', max_length=100)
+    description = models.TextField('Описание', blank=True)
+    
+    # Разрешения
+    can_view_clients = models.BooleanField('Просмотр клиентов', default=True)
+    can_edit_clients = models.BooleanField('Редактирование клиентов', default=False)
+    can_view_credits = models.BooleanField('Просмотр кредитов', default=True)
+    can_edit_credits = models.BooleanField('Редактирование кредитов', default=False)
+    can_make_calls = models.BooleanField('Совершать звонки', default=False)
+    can_send_sms = models.BooleanField('Отправлять SMS', default=False)
+    can_send_email = models.BooleanField('Отправлять Email', default=False)
+    can_restructure = models.BooleanField('Реструктуризация', default=False)
+    can_escalate = models.BooleanField('Эскалация кейсов', default=False)
+    can_access_legal = models.BooleanField('Доступ к юридическому модулю', default=False)
+    can_manage_operators = models.BooleanField('Управление операторами', default=False)
+    can_view_reports = models.BooleanField('Просмотр отчётов', default=False)
+    can_export_data = models.BooleanField('Экспорт данных', default=False)
+    can_access_ml = models.BooleanField('Доступ к ML моделям', default=False)
+    can_audit = models.BooleanField('Аудит действий', default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.display_name
+    
+    class Meta:
+        verbose_name = 'Роль'
+        verbose_name_plural = 'Роли'
+
+
+# =====================================================
+# Аудит-логирование
+# =====================================================
+
+class AuditLog(models.Model):
+    """Аудит всех действий в системе"""
+    ACTION_CHOICES = [
+        ('create', 'Создание'),
+        ('read', 'Просмотр'),
+        ('update', 'Изменение'),
+        ('delete', 'Удаление'),
+        ('login', 'Вход'),
+        ('logout', 'Выход'),
+        ('call', 'Звонок'),
+        ('sms', 'SMS'),
+        ('email', 'Email'),
+        ('escalate', 'Эскалация'),
+        ('restructure', 'Реструктуризация'),
+        ('legal_action', 'Юридическое действие'),
+        ('export', 'Экспорт'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Пользователь')
+    action = models.CharField('Действие', max_length=50, choices=ACTION_CHOICES)
+    model_name = models.CharField('Модель', max_length=100)
+    object_id = models.IntegerField('ID объекта', null=True, blank=True)
+    object_repr = models.CharField('Представление объекта', max_length=500, blank=True)
+    changes = models.JSONField('Изменения', default=dict, blank=True)
+    ip_address = models.GenericIPAddressField('IP адрес', null=True, blank=True)
+    user_agent = models.CharField('User Agent', max_length=500, blank=True)
+    timestamp = models.DateTimeField('Время', auto_now_add=True)
+    
+    # Для соответствия ФЗ-152
+    personal_data_accessed = models.BooleanField('Доступ к ПДн', default=False)
+    
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.model_name} - {self.timestamp}"
+    
+    class Meta:
+        verbose_name = 'Запись аудита'
+        verbose_name_plural = 'Журнал аудита'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['action', 'timestamp']),
+        ]
 
 
 class Operator(models.Model):
     """Оператор (50 записей)"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     full_name = models.CharField('ФИО оператора', max_length=200)
-    role = models.CharField('Роль / группа', max_length=100, default='operator')
+    
+    ROLE_CHOICES = [
+        ('junior_operator', 'Джуниор оператор'),
+        ('operator', 'Оператор'),
+        ('senior_operator', 'Старший оператор'),
+        ('team_lead', 'Тимлид'),
+        ('supervisor', 'Супервайзер'),
+        ('legal_specialist', 'Юрист'),
+        ('manager', 'Менеджер'),
+    ]
+    role = models.CharField('Роль / группа', max_length=50, choices=ROLE_CHOICES, default='operator')
+    
+    # Связь с системой ролей
+    system_role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Системная роль')
+    
     hire_date = models.DateField('Дата трудоустройства', null=True, blank=True)
     current_load = models.IntegerField('Текущая нагрузка', default=0)
+    max_load = models.IntegerField('Максимальная нагрузка', default=50)
+    
+    # Специализация оператора
+    SPECIALIZATION_CHOICES = [
+        ('soft', 'Soft Collection'),
+        ('hard', 'Hard Collection'),
+        ('legal', 'Legal Collection'),
+        ('restructure', 'Реструктуризация'),
+        ('universal', 'Универсальный'),
+    ]
+    specialization = models.CharField('Специализация', max_length=20, choices=SPECIALIZATION_CHOICES, default='universal')
+    
+    # Статистика
+    success_rate = models.FloatField('Показатель успешности', default=0.5)
+    avg_call_duration = models.IntegerField('Средняя длительность звонка (сек)', default=180)
+    total_collected = models.DecimalField('Всего собрано', max_digits=14, decimal_places=2, default=0)
     
     STATUS_CHOICES = [
         ('active', 'Активен'),
         ('break', 'Перерыв'),
         ('offline', 'Не в сети'),
         ('on_call', 'На звонке'),
+        ('training', 'Обучение'),
     ]
     status = models.CharField('Статус оператора', max_length=20, choices=STATUS_CHOICES, default='active')
 
@@ -103,6 +232,9 @@ class Credit(models.Model):
         ('overdue', 'Просрочен'),
         ('default', 'Дефолт'),
         ('restructured', 'Реструктурирован'),
+        ('legal', 'В судебном производстве'),
+        ('sold', 'Продан коллекторам'),
+        ('written_off', 'Списан'),
     ]
     status = models.CharField('Статус кредита', max_length=20, choices=STATUS_CHOICES, default='active')
     actuality_date = models.DateField('Дата актуальности', null=True, blank=True)
@@ -113,6 +245,561 @@ class Credit(models.Model):
     class Meta:
         verbose_name = 'Кредит'
         verbose_name_plural = 'Кредиты'
+
+
+# =====================================================
+# COLLECTION CASE - Кейс взыскания
+# =====================================================
+
+class CollectionCase(models.Model):
+    """
+    Кейс взыскания - центральная сущность для управления процессом collection.
+    Один кейс может включать несколько кредитов одного клиента.
+    """
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='collection_cases', verbose_name='Клиент')
+    credits = models.ManyToManyField('Credit', related_name='collection_cases', verbose_name='Кредиты')
+    
+    # Назначенный оператор
+    assigned_operator = models.ForeignKey(Operator, on_delete=models.SET_NULL, null=True, blank=True, 
+                                          related_name='assigned_cases', verbose_name='Назначенный оператор')
+    
+    # Стадия взыскания
+    STAGE_CHOICES = [
+        ('pre_collection', 'Pre-Collection'),
+        ('soft_early', 'Soft Collection (ранняя)'),
+        ('soft_late', 'Soft Collection (поздняя)'),
+        ('hard', 'Hard Collection'),
+        ('legal_pretrial', 'Досудебная работа'),
+        ('legal_court', 'Судебное производство'),
+        ('legal_execution', 'Исполнительное производство'),
+        ('restructured', 'Реструктуризация'),
+        ('settled', 'Урегулировано'),
+        ('sold', 'Продано'),
+        ('written_off', 'Списано'),
+    ]
+    stage = models.CharField('Стадия взыскания', max_length=30, choices=STAGE_CHOICES, default='pre_collection')
+    
+    # Приоритет
+    PRIORITY_CHOICES = [
+        (1, 'Низкий'),
+        (2, 'Ниже среднего'),
+        (3, 'Средний'),
+        (4, 'Выше среднего'),
+        (5, 'Высокий'),
+        (6, 'Критический'),
+    ]
+    priority = models.IntegerField('Приоритет', choices=PRIORITY_CHOICES, default=3)
+    priority_score = models.FloatField('Скоринг приоритета', default=50.0)
+    
+    # Суммы
+    total_debt = models.DecimalField('Общий долг', max_digits=14, decimal_places=2, default=0)
+    overdue_amount = models.DecimalField('Просроченная сумма', max_digits=14, decimal_places=2, default=0)
+    penalties = models.DecimalField('Штрафы и пени', max_digits=12, decimal_places=2, default=0)
+    
+    # Сроки
+    overdue_days = models.IntegerField('Дней просрочки', default=0)
+    max_overdue_days = models.IntegerField('Макс. дней просрочки', default=0)
+    
+    # Статус кейса
+    STATUS_CHOICES = [
+        ('active', 'Активный'),
+        ('paused', 'Приостановлен'),
+        ('escalated', 'Эскалирован'),
+        ('closed_paid', 'Закрыт - оплачен'),
+        ('closed_restructured', 'Закрыт - реструктуризация'),
+        ('closed_sold', 'Закрыт - продан'),
+        ('closed_written_off', 'Закрыт - списан'),
+    ]
+    status = models.CharField('Статус кейса', max_length=30, choices=STATUS_CHOICES, default='active')
+    
+    # Прогнозы ML
+    return_probability = models.FloatField('Вероятность возврата', default=0.5)
+    predicted_return_amount = models.DecimalField('Прогноз суммы возврата', max_digits=14, decimal_places=2, default=0)
+    risk_segment = models.CharField('Риск-сегмент', max_length=20, default='medium')
+    
+    # Даты
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+    stage_changed_at = models.DateTimeField('Дата смены стадии', null=True, blank=True)
+    next_action_date = models.DateField('Дата следующего действия', null=True, blank=True)
+    
+    # Счётчики активности
+    total_contacts = models.IntegerField('Всего контактов', default=0)
+    successful_contacts = models.IntegerField('Успешных контактов', default=0)
+    promises_count = models.IntegerField('Количество обещаний', default=0)
+    broken_promises = models.IntegerField('Нарушенных обещаний', default=0)
+    
+    # Психотип и стратегия
+    psychotype = models.CharField('Психотип', max_length=50, blank=True)
+    recommended_strategy = models.CharField('Рекомендованная стратегия', max_length=100, blank=True)
+    
+    def __str__(self):
+        return f"Кейс #{self.id} - {self.client.full_name} ({self.get_stage_display()})"
+    
+    class Meta:
+        verbose_name = 'Кейс взыскания'
+        verbose_name_plural = 'Кейсы взыскания'
+        ordering = ['-priority', '-overdue_amount']
+        indexes = [
+            models.Index(fields=['stage', 'status']),
+            models.Index(fields=['assigned_operator', 'status']),
+            models.Index(fields=['priority', 'overdue_days']),
+        ]
+
+
+class CollectionStageHistory(models.Model):
+    """История переходов между стадиями collection"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='stage_history')
+    from_stage = models.CharField('Из стадии', max_length=30)
+    to_stage = models.CharField('В стадию', max_length=30)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Кем изменено')
+    reason = models.TextField('Причина перехода', blank=True)
+    auto_transition = models.BooleanField('Автоматический переход', default=False)
+    created_at = models.DateTimeField('Дата перехода', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'История стадий'
+        verbose_name_plural = 'История стадий'
+        ordering = ['-created_at']
+
+
+# =====================================================
+# PRE-COLLECTION
+# =====================================================
+
+class PreCollectionAlert(models.Model):
+    """Алерты Pre-Collection - раннее предупреждение о возможной просрочке"""
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='precollection_alerts')
+    credit = models.ForeignKey('Credit', on_delete=models.CASCADE, related_name='precollection_alerts')
+    
+    ALERT_TYPE_CHOICES = [
+        ('payment_due_soon', 'Скоро платёж'),
+        ('payment_missed', 'Пропущен платёж'),
+        ('high_risk_detected', 'Обнаружен высокий риск'),
+        ('behavior_change', 'Изменение поведения'),
+        ('income_drop', 'Снижение дохода'),
+    ]
+    alert_type = models.CharField('Тип алерта', max_length=30, choices=ALERT_TYPE_CHOICES)
+    
+    days_before_due = models.IntegerField('Дней до платежа', default=0)
+    risk_score = models.FloatField('Риск-скор', default=0.5)
+    
+    # Действия
+    sms_sent = models.BooleanField('SMS отправлено', default=False)
+    email_sent = models.BooleanField('Email отправлено', default=False)
+    push_sent = models.BooleanField('Push отправлено', default=False)
+    
+    # Отслеживание реакции
+    notification_opened = models.BooleanField('Уведомление открыто', default=False)
+    lk_visited = models.BooleanField('Посещён ЛК', default=False)
+    payment_made = models.BooleanField('Платёж совершён', default=False)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    processed_at = models.DateTimeField('Обработано', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Алерт Pre-Collection'
+        verbose_name_plural = 'Алерты Pre-Collection'
+        ordering = ['-created_at']
+
+
+# =====================================================
+# SOFT COLLECTION
+# =====================================================
+
+class CommunicationTask(models.Model):
+    """Задача на коммуникацию с клиентом"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='communication_tasks')
+    operator = models.ForeignKey(Operator, on_delete=models.SET_NULL, null=True, related_name='communication_tasks')
+    
+    TASK_TYPE_CHOICES = [
+        ('call_first', 'Первичный звонок'),
+        ('call_followup', 'Повторный звонок'),
+        ('call_promise', 'Звонок по обещанию'),
+        ('sms_reminder', 'SMS напоминание'),
+        ('sms_demand', 'SMS требование'),
+        ('email_reminder', 'Email напоминание'),
+        ('email_demand', 'Email требование'),
+        ('letter_soft', 'Мягкое письмо'),
+        ('letter_demand', 'Письмо-требование'),
+    ]
+    task_type = models.CharField('Тип задачи', max_length=30, choices=TASK_TYPE_CHOICES)
+    
+    PRIORITY_CHOICES = [
+        (1, 'Низкий'),
+        (2, 'Средний'),
+        (3, 'Высокий'),
+        (4, 'Срочный'),
+    ]
+    priority = models.IntegerField('Приоритет', choices=PRIORITY_CHOICES, default=2)
+    
+    scheduled_date = models.DateField('Запланированная дата')
+    scheduled_time = models.TimeField('Запланированное время', null=True, blank=True)
+    
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает'),
+        ('in_progress', 'В работе'),
+        ('completed', 'Выполнено'),
+        ('failed', 'Не выполнено'),
+        ('cancelled', 'Отменено'),
+        ('rescheduled', 'Перенесено'),
+    ]
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Результат
+    result_code = models.CharField('Код результата', max_length=50, blank=True)
+    result_notes = models.TextField('Заметки', blank=True)
+    
+    # Время выполнения
+    started_at = models.DateTimeField('Начало выполнения', null=True, blank=True)
+    completed_at = models.DateTimeField('Завершение', null=True, blank=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Задача на коммуникацию'
+        verbose_name_plural = 'Задачи на коммуникацию'
+        ordering = ['scheduled_date', 'priority']
+
+
+class CallScript(models.Model):
+    """Скрипты для звонков"""
+    name = models.CharField('Название', max_length=200)
+    
+    STAGE_CHOICES = [
+        ('pre_collection', 'Pre-Collection'),
+        ('soft_early', 'Soft Early'),
+        ('soft_late', 'Soft Late'),
+        ('hard', 'Hard Collection'),
+    ]
+    stage = models.CharField('Стадия', max_length=30, choices=STAGE_CHOICES)
+    
+    PSYCHOTYPE_CHOICES = [
+        ('any', 'Любой'),
+        ('cooperative', 'Кооперативный'),
+        ('forgetful', 'Забывчивый'),
+        ('unable', 'Не может платить'),
+        ('unwilling', 'Не хочет платить'),
+        ('toxic', 'Токсичный'),
+    ]
+    psychotype = models.CharField('Психотип', max_length=20, choices=PSYCHOTYPE_CHOICES, default='any')
+    
+    opening = models.TextField('Приветствие')
+    key_points = models.JSONField('Ключевые тезисы', default=list)
+    objection_handlers = models.JSONField('Обработка возражений', default=dict)
+    closing = models.TextField('Завершение')
+    tips = models.JSONField('Подсказки оператору', default=list)
+    
+    is_active = models.BooleanField('Активен', default=True)
+    
+    class Meta:
+        verbose_name = 'Скрипт звонка'
+        verbose_name_plural = 'Скрипты звонков'
+
+
+class Promise(models.Model):
+    """Обещание клиента о платеже"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='promises')
+    intervention = models.ForeignKey('Intervention', on_delete=models.SET_NULL, null=True, related_name='promises')
+    
+    promised_amount = models.DecimalField('Обещанная сумма', max_digits=12, decimal_places=2)
+    promised_date = models.DateField('Обещанная дата')
+    
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает'),
+        ('kept', 'Выполнено'),
+        ('partial', 'Частично выполнено'),
+        ('broken', 'Нарушено'),
+        ('extended', 'Продлено'),
+    ]
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    actual_amount = models.DecimalField('Фактическая сумма', max_digits=12, decimal_places=2, default=0)
+    actual_date = models.DateField('Фактическая дата', null=True, blank=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    verified_at = models.DateTimeField('Проверено', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Обещание'
+        verbose_name_plural = 'Обещания'
+        ordering = ['promised_date']
+
+
+# =====================================================
+# HARD COLLECTION
+# =====================================================
+
+class FieldVisit(models.Model):
+    """Выездное мероприятие (Hard Collection)"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='field_visits')
+    operator = models.ForeignKey(Operator, on_delete=models.SET_NULL, null=True)
+    
+    scheduled_date = models.DateField('Запланированная дата')
+    scheduled_time = models.TimeField('Запланированное время', null=True, blank=True)
+    
+    address = models.TextField('Адрес визита')
+    
+    VISIT_TYPE_CHOICES = [
+        ('residence', 'По месту жительства'),
+        ('work', 'По месту работы'),
+        ('guarantor', 'К поручителю'),
+        ('relatives', 'К родственникам'),
+    ]
+    visit_type = models.CharField('Тип визита', max_length=20, choices=VISIT_TYPE_CHOICES, default='residence')
+    
+    STATUS_CHOICES = [
+        ('scheduled', 'Запланирован'),
+        ('in_progress', 'В процессе'),
+        ('completed', 'Завершён'),
+        ('cancelled', 'Отменён'),
+        ('rescheduled', 'Перенесён'),
+    ]
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    
+    RESULT_CHOICES = [
+        ('contact_made', 'Контакт состоялся'),
+        ('no_contact', 'Контакт не состоялся'),
+        ('promise_made', 'Получено обещание'),
+        ('payment_made', 'Получен платёж'),
+        ('refused', 'Отказ от контакта'),
+        ('not_home', 'Не застали'),
+        ('wrong_address', 'Неверный адрес'),
+    ]
+    result = models.CharField('Результат', max_length=20, choices=RESULT_CHOICES, blank=True)
+    
+    notes = models.TextField('Заметки', blank=True)
+    photo_evidence = models.JSONField('Фото-фиксация', default=list)
+    
+    actual_date = models.DateField('Фактическая дата', null=True, blank=True)
+    duration_minutes = models.IntegerField('Длительность (мин)', default=0)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Выездное мероприятие'
+        verbose_name_plural = 'Выездные мероприятия'
+        ordering = ['scheduled_date']
+
+
+# =====================================================
+# LEGAL COLLECTION
+# =====================================================
+
+class LegalCase(models.Model):
+    """Судебное дело"""
+    collection_case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='legal_cases')
+    
+    case_number = models.CharField('Номер дела', max_length=100, blank=True)
+    court_name = models.CharField('Наименование суда', max_length=300, blank=True)
+    
+    STAGE_CHOICES = [
+        ('pretrial_claim', 'Досудебная претензия'),
+        ('claim_filed', 'Иск подан'),
+        ('court_hearing', 'Судебные заседания'),
+        ('judgment', 'Вынесено решение'),
+        ('appeal', 'Апелляция'),
+        ('execution', 'Исполнительное производство'),
+        ('closed', 'Закрыто'),
+    ]
+    stage = models.CharField('Стадия', max_length=30, choices=STAGE_CHOICES, default='pretrial_claim')
+    
+    claim_amount = models.DecimalField('Сумма иска', max_digits=14, decimal_places=2, default=0)
+    awarded_amount = models.DecimalField('Присуждённая сумма', max_digits=14, decimal_places=2, default=0)
+    
+    # Даты
+    pretrial_sent_date = models.DateField('Дата отправки претензии', null=True, blank=True)
+    claim_filed_date = models.DateField('Дата подачи иска', null=True, blank=True)
+    hearing_date = models.DateField('Дата заседания', null=True, blank=True)
+    judgment_date = models.DateField('Дата решения', null=True, blank=True)
+    
+    # Исполнительное производство
+    execution_number = models.CharField('Номер ИП', max_length=100, blank=True)
+    bailiff_name = models.CharField('ФИО пристава', max_length=200, blank=True)
+    bailiff_phone = models.CharField('Телефон пристава', max_length=32, blank=True)
+    
+    # Документы
+    documents = models.JSONField('Документы', default=list)
+    
+    notes = models.TextField('Заметки', blank=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Судебное дело'
+        verbose_name_plural = 'Судебные дела'
+        ordering = ['-created_at']
+
+
+class LegalDocument(models.Model):
+    """Юридический документ"""
+    legal_case = models.ForeignKey(LegalCase, on_delete=models.CASCADE, related_name='legal_documents')
+    
+    DOCUMENT_TYPE_CHOICES = [
+        ('pretrial_claim', 'Досудебная претензия'),
+        ('statement_of_claim', 'Исковое заявление'),
+        ('motion', 'Ходатайство'),
+        ('objection', 'Возражение'),
+        ('judgment', 'Судебное решение'),
+        ('writ_of_execution', 'Исполнительный лист'),
+        ('other', 'Другое'),
+    ]
+    document_type = models.CharField('Тип документа', max_length=30, choices=DOCUMENT_TYPE_CHOICES)
+    
+    title = models.CharField('Название', max_length=300)
+    template_used = models.CharField('Использованный шаблон', max_length=200, blank=True)
+    
+    file_path = models.CharField('Путь к файлу', max_length=500, blank=True)
+    
+    sent_date = models.DateField('Дата отправки', null=True, blank=True)
+    received_date = models.DateField('Дата получения', null=True, blank=True)
+    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Юридический документ'
+        verbose_name_plural = 'Юридические документы'
+
+
+# =====================================================
+# РЕСТРУКТУРИЗАЦИЯ
+# =====================================================
+
+class RestructuringRequest(models.Model):
+    """Запрос на реструктуризацию"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='restructuring_requests')
+    credit = models.ForeignKey('Credit', on_delete=models.CASCADE)
+    
+    # Текущие параметры
+    current_debt = models.DecimalField('Текущий долг', max_digits=14, decimal_places=2)
+    current_monthly_payment = models.DecimalField('Текущий платёж', max_digits=12, decimal_places=2)
+    current_rate = models.DecimalField('Текущая ставка', max_digits=5, decimal_places=2)
+    remaining_term = models.IntegerField('Остаток срока (мес)')
+    
+    # Запрашиваемые параметры
+    RESTRUCTURE_TYPE_CHOICES = [
+        ('term_extension', 'Пролонгация'),
+        ('rate_reduction', 'Снижение ставки'),
+        ('payment_holiday', 'Кредитные каникулы'),
+        ('partial_write_off', 'Частичное списание'),
+        ('combined', 'Комбинированная'),
+    ]
+    restructure_type = models.CharField('Тип реструктуризации', max_length=30, choices=RESTRUCTURE_TYPE_CHOICES)
+    
+    requested_term = models.IntegerField('Запрашиваемый срок (мес)', null=True, blank=True)
+    requested_rate = models.DecimalField('Запрашиваемая ставка', max_digits=5, decimal_places=2, null=True, blank=True)
+    requested_holiday_months = models.IntegerField('Месяцев каникул', null=True, blank=True)
+    requested_write_off = models.DecimalField('Сумма списания', max_digits=14, decimal_places=2, null=True, blank=True)
+    
+    # Рассчитанные параметры
+    new_monthly_payment = models.DecimalField('Новый платёж', max_digits=12, decimal_places=2, null=True, blank=True)
+    total_overpayment = models.DecimalField('Переплата', max_digits=14, decimal_places=2, null=True, blank=True)
+    
+    # Обоснование
+    client_income = models.DecimalField('Доход клиента', max_digits=12, decimal_places=2, default=0)
+    client_expenses = models.DecimalField('Расходы клиента', max_digits=12, decimal_places=2, default=0)
+    hardship_reason = models.TextField('Причина затруднений')
+    supporting_documents = models.JSONField('Подтверждающие документы', default=list)
+    
+    # Оценка
+    viability_score = models.FloatField('Оценка жизнеспособности', default=0.5)
+    pd_before = models.FloatField('PD до реструктуризации', default=0.5)
+    pd_after = models.FloatField('PD после реструктуризации', default=0.5)
+    lgd_impact = models.FloatField('Влияние на LGD', default=0)
+    
+    # Статус
+    STATUS_CHOICES = [
+        ('draft', 'Черновик'),
+        ('submitted', 'Подана'),
+        ('under_review', 'На рассмотрении'),
+        ('approved', 'Одобрена'),
+        ('rejected', 'Отклонена'),
+        ('activated', 'Активирована'),
+        ('cancelled', 'Отменена'),
+    ]
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_restructurings')
+    review_notes = models.TextField('Комментарий к решению', blank=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    submitted_at = models.DateTimeField('Подано', null=True, blank=True)
+    reviewed_at = models.DateTimeField('Рассмотрено', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Запрос на реструктуризацию'
+        verbose_name_plural = 'Запросы на реструктуризацию'
+        ordering = ['-created_at']
+
+
+# =====================================================
+# WORKFLOW ENGINE
+# =====================================================
+
+class WorkflowRule(models.Model):
+    """Правила workflow для автоматических переходов"""
+    name = models.CharField('Название правила', max_length=200)
+    description = models.TextField('Описание', blank=True)
+    
+    # Условия
+    from_stage = models.CharField('Из стадии', max_length=30)
+    to_stage = models.CharField('В стадию', max_length=30)
+    
+    # Условия срабатывания (JSON)
+    # Пример: {"overdue_days": {"gte": 30}, "total_contacts": {"gte": 3}, "promises_broken": {"gte": 1}}
+    conditions = models.JSONField('Условия', default=dict)
+    
+    # Действия при переходе
+    # Пример: {"create_task": "call_followup", "notify_manager": true, "change_priority": 4}
+    actions = models.JSONField('Действия', default=dict)
+    
+    priority = models.IntegerField('Приоритет правила', default=10)
+    is_active = models.BooleanField('Активно', default=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Правило workflow'
+        verbose_name_plural = 'Правила workflow'
+        ordering = ['priority']
+
+
+class ScheduledAction(models.Model):
+    """Запланированные автоматические действия"""
+    case = models.ForeignKey(CollectionCase, on_delete=models.CASCADE, related_name='scheduled_actions')
+    
+    ACTION_TYPE_CHOICES = [
+        ('send_sms', 'Отправить SMS'),
+        ('send_email', 'Отправить Email'),
+        ('create_task', 'Создать задачу'),
+        ('escalate', 'Эскалировать'),
+        ('change_stage', 'Сменить стадию'),
+        ('check_promise', 'Проверить обещание'),
+        ('check_payment', 'Проверить платёж'),
+    ]
+    action_type = models.CharField('Тип действия', max_length=30, choices=ACTION_TYPE_CHOICES)
+    
+    scheduled_at = models.DateTimeField('Запланировано на')
+    
+    parameters = models.JSONField('Параметры', default=dict)
+    
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает'),
+        ('executed', 'Выполнено'),
+        ('failed', 'Ошибка'),
+        ('cancelled', 'Отменено'),
+    ]
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    executed_at = models.DateTimeField('Выполнено', null=True, blank=True)
+    result = models.TextField('Результат', blank=True)
+    
+    class Meta:
+        verbose_name = 'Запланированное действие'
+        verbose_name_plural = 'Запланированные действия'
+        ordering = ['scheduled_at']
 
 
 class CreditState(models.Model):
@@ -193,6 +880,8 @@ class Intervention(models.Model):
     duration = models.IntegerField('Длительность разговора (сек)', default=0)
     promise_amount = models.DecimalField('Сумма обещания', max_digits=12, decimal_places=2, default=0)
     promise_date = models.DateField('Дата обещания', null=True, blank=True)
+    notes = models.TextField('Комментарий оператора', blank=True, default='')
+    refusal_reason = models.CharField('Причина отказа', max_length=200, blank=True, default='')
 
     def __str__(self):
         return f"Воздействие #{self.id} - {self.intervention_type}"
@@ -243,6 +932,65 @@ class ScoringResult(models.Model):
     class Meta:
         verbose_name = 'Результат прогнозирования'
         verbose_name_plural = 'Результаты прогнозирования'
+
+
+class TrainingData(models.Model):
+    """
+    Обучающая выборка для модели прогнозирования просрочки.
+    Соответствует разделу 3.2 курсовой работы - матрица признаков X и целевая переменная y.
+    """
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='training_records', verbose_name='Клиент')
+    credit = models.ForeignKey(Credit, on_delete=models.CASCADE, related_name='training_records', verbose_name='Кредит')
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    
+    # === Параметры клиента (признаки 1-8) ===
+    age = models.IntegerField('Возраст', default=0)
+    gender = models.IntegerField('Пол (1=М, 0=Ж)', default=0)
+    marital_status = models.IntegerField('Семейное положение', default=0)
+    employment = models.IntegerField('Тип занятости', default=0)
+    dependents = models.IntegerField('Количество иждивенцев', default=0)
+    monthly_income = models.FloatField('Ежемесячный доход', default=0)
+    has_other_credits = models.IntegerField('Наличие других кредитов', default=0)
+    other_credits_count = models.IntegerField('Количество других кредитов', default=0)
+    
+    # === Параметры кредита (признаки 9-17) ===
+    credit_amount = models.FloatField('Сумма кредита', default=0)
+    credit_term = models.IntegerField('Срок кредита (мес)', default=0)
+    interest_rate = models.FloatField('Процентная ставка', default=0)
+    lti_ratio = models.FloatField('Коэффициент LTI', default=0)
+    credit_age = models.IntegerField('Возраст кредита (дней)', default=0)
+    credit_status = models.IntegerField('Статус кредита', default=0)
+    monthly_payment = models.FloatField('Ежемесячный платёж', default=0)
+    
+    # === Показатели платёжной дисциплины (признаки 18-25) ===
+    total_payments = models.IntegerField('Всего платежей', default=0)
+    overdue_payments = models.IntegerField('Просроченных платежей', default=0)
+    max_overdue_days = models.IntegerField('Макс. дней просрочки', default=0)
+    avg_payment = models.FloatField('Средний платёж', default=0)
+    payments_count_12m = models.IntegerField('Платежей за 12 мес', default=0)
+    overdue_count_12m = models.IntegerField('Просрочек за 12 мес', default=0)
+    overdue_share_12m = models.FloatField('Доля просрочек за 12 мес', default=0)
+    max_overdue_12m = models.IntegerField('Макс. просрочка за 12 мес', default=0)
+    
+    # === Характеристики взаимодействия (признаки 26-28) ===
+    total_interventions = models.IntegerField('Всего воздействий', default=0)
+    completed_interventions = models.IntegerField('Успешных воздействий', default=0)
+    promises_count = models.IntegerField('Количество обещаний', default=0)
+    
+    # === Целевая переменная y ===
+    RISK_CHOICES = [
+        (0, 'Низкий риск'),
+        (1, 'Средний риск'),
+        (2, 'Высокий риск'),
+    ]
+    risk_category = models.IntegerField('Категория риска (y)', choices=RISK_CHOICES, default=0)
+    
+    def __str__(self):
+        return f"TrainingData #{self.id} - Credit {self.credit_id} - Risk: {self.risk_category}"
+    
+    class Meta:
+        verbose_name = 'Обучающая выборка'
+        verbose_name_plural = 'Обучающие выборки'
 
 
 class CreditApplication(models.Model):
