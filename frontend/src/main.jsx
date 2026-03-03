@@ -9,6 +9,7 @@ import Client360Page from './Client360Page'
 import LoanPredictionPage from './LoanPredictionPage'
 import OverduePredictionPage from './OverduePredictionPage'
 import DatabaseViewPage from './DatabaseViewPage'
+import OperatorStatsPage from './OperatorStatsPage'
 import './styles.css'
 
 const SESSION_KEY = 'collection_user';
@@ -145,6 +146,7 @@ function Root() {
         <button className={`btn ${page === 'prediction' ? '' : 'ghost'}`} onClick={() => setPage('prediction')}>🔮 Скоринг</button>
         <button className={`btn ${page === 'overdue' ? '' : 'ghost'}`} onClick={() => setPage('overdue')}>⚠️ Просрочка</button>
         <button className={`btn ${page === 'database' ? '' : 'ghost'}`} onClick={() => setPage('database')}>🗄️ База данных</button>
+        <button className={`btn ${page === 'mystats' ? '' : 'ghost'}`} onClick={() => setPage('mystats')}>📈 Моя статистика</button>
         {isManager && <button className={`btn ${page === 'dashboard' ? '' : 'ghost'}`} onClick={() => setPage('dashboard')}>📊 Дашборд</button>}
         <div style={{flex:1}} />
         <span className="muted" style={{fontSize:13}}>{user.name} ({user.role === 'manager' ? 'Руководитель' : 'Оператор'})</span>
@@ -159,6 +161,7 @@ function Root() {
       {page === 'prediction' && <LoanPredictionPage />}
       {page === 'overdue' && <OverduePredictionPage />}
       {page === 'database' && <DatabaseViewPage />}
+      {page === 'mystats' && <OperatorStatsPage user={user} onBack={() => setPage('desk')} />}
     </div>
   )
 }

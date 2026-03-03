@@ -27,6 +27,14 @@ const COPILOT_PHRASES = {
 
 const MOCK_HISTORY = [];
 
+// Стили для табов в сайдбаре
+const tabStyle = (active) => ({
+  flex: 1, padding: '6px 0', textAlign: 'center', cursor: 'pointer',
+  fontWeight: 600, fontSize: 12, borderBottom: active ? '2px solid #2563eb' : '2px solid transparent',
+  color: active ? '#2563eb' : '#6b7280', background: active ? '#eff6ff' : 'transparent',
+  transition: 'all 0.15s',
+});
+
 const formatCurrency = (v) => Number(v || 0).toLocaleString("ru-RU", { style: "currency", currency: "RUB" });
 const relativeDate = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
 
@@ -57,6 +65,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
   const [refusalReason, setRefusalReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState('pending'); // 'pending' | 'worked'
   const [creditDetails, setCreditDetails] = useState([]);
   const callTimerRef = useRef(null);
 
@@ -130,7 +139,8 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
         debtors = Object.values(clientMap).sort((a, b) => b.outstanding - a.outstanding);
       }
       
-      // Подгружаем количество попыток из interventions
+      // Подгружаем количество попыток из interventions и определяем, отработан ли клиент сегодня
+      const todayStr = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
       for (const d of debtors) {
         try {
           const hResp = await fetch(`${API_URL}/interventions/?client_id=${d.clientId}&ordering=-datetime`);
@@ -138,8 +148,18 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             const interventions = await hResp.json();
             d.attempts = interventions.length;
             d.lastContact = interventions.length > 0 ? interventions[0].datetime : null;
+            // Считаем сегодняшние воздействия
+            const todayInterventions = interventions.filter(i => i.datetime && i.datetime.slice(0, 10) === todayStr);
+            d.workedToday = todayInterventions.length > 0;
+            d.todayCount = todayInterventions.length;
+          } else {
+            d.workedToday = false;
+            d.todayCount = 0;
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          d.workedToday = false;
+          d.todayCount = 0;
+        }
       }
 
       setQueue(debtors);
@@ -281,6 +301,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
       const body = {
         client: selected.clientId,
         credit: selected.creditId,
+        operator: user?.id || null,
         datetime: new Date().toISOString(),
         intervention_type: 'phone',
         status: mapResultToStatus(resultCode),
@@ -299,9 +320,9 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
         const err = await resp.text();
         throw new Error(err);
       }
-      // Обновляем историю и очередь
+      // Обновляем историю и очередь — помечаем клиента как отработанного сегодня
       await loadHistory(selected.clientId);
-      setQueue(q => q.map(d => d.id === selected.id ? { ...d, attempts: d.attempts + 1, lastContact: new Date().toISOString() } : d));
+      setQueue(q => q.map(d => d.id === selected.id ? { ...d, attempts: d.attempts + 1, lastContact: new Date().toISOString(), workedToday: true, todayCount: (d.todayCount || 0) + 1 } : d));
       // Сброс полей
       setNote("");
       setPromiseAmount("");
@@ -319,7 +340,21 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
     saveInterventionToDB(0);
   }
 
-  function goNext() { const idx = queue.findIndex(q => q.id === selectedId); const next = queue[idx + 1] ?? queue[0]; setSelectedId(next?.id ?? null); setResultCode("no_answer"); setNote(""); setPromiseAmount(""); setPromiseDate(""); setRefusalReason(""); }
+  function goNext() {
+    // Переходим к следующему неотработанному клиенту
+    const pending = queue.filter(d => !d.workedToday);
+    if (pending.length === 0) {
+      // Все отработаны — переходим к следующему в общем списке
+      const idx = queue.findIndex(q => q.id === selectedId);
+      const next = queue[idx + 1] ?? queue[0];
+      setSelectedId(next?.id ?? null);
+    } else {
+      const currentPendingIdx = pending.findIndex(q => q.id === selectedId);
+      const next = pending[currentPendingIdx + 1] ?? pending[0];
+      setSelectedId(next?.id ?? null);
+    }
+    setResultCode("no_answer"); setNote(""); setPromiseAmount(""); setPromiseDate(""); setRefusalReason("");
+  }
 
   const visible = queue.filter(d => {
     if (filter === "overdue30" && d.daysPastDue < 30) return false;
@@ -327,6 +362,9 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
     if (search && !( (d.name + ' ' + d.mainPhone).toLowerCase().includes(search.toLowerCase()) )) return false;
     return true;
   });
+
+  const pendingVisible = visible.filter(d => !d.workedToday);
+  const workedVisible = visible.filter(d => d.workedToday);
 
   return (
     <div className="container">
@@ -348,10 +386,23 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
               <option value="high">Сумма &gt; 20k</option>
             </select>
           </div>
+          {/* === Вкладки === */}
+          <div style={{display:'flex',borderBottom:'1px solid #e5e7eb',marginBottom:0}}>
+            <div style={tabStyle(sidebarTab === 'pending')} onClick={() => setSidebarTab('pending')}>
+              📋 К отработке ({pendingVisible.length})
+            </div>
+            <div style={tabStyle(sidebarTab === 'worked')} onClick={() => setSidebarTab('worked')}>
+              ✅ Отработаны ({workedVisible.length})
+            </div>
+          </div>
           <div className="clients-list">
             {loadingQueue && <div className="muted" style={{padding:16,textAlign:'center'}}>⏳ Загрузка клиентов из БД...</div>}
-            {!loadingQueue && visible.length === 0 && <div className="muted" style={{padding:16,textAlign:'center'}}>Нет должников в очереди</div>}
-            {visible.map(d => (
+
+            {/* === Вкладка: К отработке === */}
+            {sidebarTab === 'pending' && !loadingQueue && pendingVisible.length === 0 && (
+              <div className="muted" style={{padding:16,textAlign:'center'}}>🎉 Все клиенты отработаны!</div>
+            )}
+            {sidebarTab === 'pending' && pendingVisible.map(d => (
               <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
                 <div className="cli-left">
                   <div className="cli-name">{d.name}</div>
@@ -364,8 +415,28 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                 <div style={{width:'100%',fontSize:12,color:'#6b7280',marginTop:8}}>Попыток: {d.attempts} • Последний контакт: {relativeDate(d.lastContact)}</div>
               </div>
             ))}
+
+            {/* === Вкладка: Отработаны сегодня === */}
+            {sidebarTab === 'worked' && !loadingQueue && workedVisible.length === 0 && (
+              <div className="muted" style={{padding:16,textAlign:'center'}}>Пока нет отработанных клиентов</div>
+            )}
+            {sidebarTab === 'worked' && workedVisible.map(d => (
+              <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
+                <div className="cli-left">
+                  <div className="cli-name">{d.name}</div>
+                  <div className="cli-phone">{d.mainPhone}</div>
+                </div>
+                <div className="cli-right">
+                  <div className="cli-amount">{formatCurrency(d.outstanding)}</div>
+                  <div className="cli-days">{d.daysPastDue} дн.</div>
+                </div>
+                <div style={{width:'100%',fontSize:12,color:'#6b7280',marginTop:8}}>
+                  <span style={{color:'#16a34a',fontWeight:600}}>Сегодня: {d.todayCount} воздейств.</span> • Последний: {relativeDate(d.lastContact)}
+                </div>
+              </div>
+            ))}
           </div>
-          <footer className="muted" style={{marginTop:12}}>Всего в очереди: {visible.length}</footer>
+          <footer className="muted" style={{marginTop:12}}>К отработке: {pendingVisible.length} • Отработано: {workedVisible.length} • Всего: {visible.length}</footer>
         </aside>
 
         <section className="center-col">

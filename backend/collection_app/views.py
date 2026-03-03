@@ -861,66 +861,139 @@ class DashboardStatsView(APIView):
 
 
 class OperatorStatsView(APIView):
-    """Статистика оператора"""
+    """Подробная статистика оператора для страницы личной статистики"""
+    permission_classes = [permissions.AllowAny]
     
     def get(self, request, operator_id=None):
+        from django.db.models.functions import TruncDate
+        from collections import defaultdict
+        
         if operator_id is None:
-            try:
-                operator = Operator.objects.get(user=request.user)
-            except Operator.DoesNotExist:
-                return Response({'error': 'Оператор не найден'}, status=404)
-        else:
-            try:
-                operator = Operator.objects.get(id=operator_id)
-            except Operator.DoesNotExist:
-                return Response({'error': 'Оператор не найден'}, status=404)
+            operator_id = request.query_params.get('operator_id')
+            if not operator_id:
+                return Response({'error': 'operator_id обязателен'}, status=400)
+        
+        try:
+            operator = Operator.objects.get(id=operator_id)
+        except Operator.DoesNotExist:
+            return Response({'error': 'Оператор не найден'}, status=404)
         
         today = timezone.now().date()
-        month_start = today.replace(day=1)
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
         
-        # Интервенции за сегодня
-        interventions_today = Intervention.objects.filter(
-            operator=operator,
-            datetime__date=today
-        ).count()
+        # Все интервенции оператора
+        all_interventions = Intervention.objects.filter(operator=operator)
+        today_ints = all_interventions.filter(datetime__date=today)
+        week_ints = all_interventions.filter(datetime__date__gte=week_ago)
+        month_ints = all_interventions.filter(datetime__date__gte=month_ago)
         
-        # Успешные контакты
-        successful_contacts = Intervention.objects.filter(
-            operator=operator,
-            datetime__date=today,
-            result__in=['promise_to_pay', 'partial_payment', 'full_payment']
-        ).count()
+        def calc_stats(qs):
+            total = qs.count()
+            calls = qs.filter(intervention_type='phone').count()
+            contacts = qs.filter(
+                intervention_type='phone',
+                status__in=['completed', 'promise', 'refuse', 'callback']
+            ).count()
+            no_answer = qs.filter(status='no_answer').count()
+            promises = qs.filter(status='promise').count()
+            promise_amount = float(qs.filter(status='promise').aggregate(s=Sum('promise_amount'))['s'] or 0)
+            refusals = qs.filter(status='refuse').count()
+            completed = qs.filter(status='completed').count()
+            callbacks = qs.filter(status='callback').count()
+            total_duration = qs.filter(intervention_type='phone').aggregate(s=Sum('duration'))['s'] or 0
+            avg_duration = total_duration // calls if calls > 0 else 0
+            contact_rate = round(contacts / calls * 100, 1) if calls > 0 else 0
+            promise_rate = round(promises / contacts * 100, 1) if contacts > 0 else 0
+            return {
+                'total': total,
+                'calls': calls,
+                'contacts': contacts,
+                'noAnswer': no_answer,
+                'promises': promises,
+                'promiseAmount': promise_amount,
+                'refusals': refusals,
+                'completed': completed,
+                'callbacks': callbacks,
+                'totalDuration': total_duration,
+                'avgDuration': avg_duration,
+                'contactRate': contact_rate,
+                'promiseRate': promise_rate,
+            }
         
-        # Платежи благодаря оператору
-        payments_today = Payment.objects.filter(
-            credit__assignments__operator=operator,
-            payment_date=today
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        # === Ежедневная динамика за 30 дней ===
+        daily_data = []
+        daily_qs = month_ints.filter(intervention_type='phone').annotate(
+            date=TruncDate('datetime')
+        ).values('date').annotate(
+            calls=Count('id'),
+            contacts=Count('id', filter=Q(status__in=['completed', 'promise', 'refuse', 'callback'])),
+            promises=Count('id', filter=Q(status='promise')),
+            promise_amount=Sum('promise_amount', filter=Q(status='promise')),
+            total_duration=Sum('duration'),
+        ).order_by('date')
         
-        # Активные назначения
+        for day in daily_qs:
+            daily_data.append({
+                'date': day['date'].strftime('%d.%m') if day['date'] else '',
+                'dateFull': day['date'].isoformat() if day['date'] else '',
+                'calls': day['calls'],
+                'contacts': day['contacts'],
+                'promises': day['promises'],
+                'promiseAmount': float(day['promise_amount'] or 0),
+                'avgDuration': (day['total_duration'] or 0) // day['calls'] if day['calls'] > 0 else 0,
+            })
+        
+        # === Распределение по статусам (за месяц) ===
+        status_dist = list(month_ints.values('status').annotate(count=Count('id')).order_by('-count'))
+        
+        # === Распределение по часам (за месяц) ===
+        from django.db.models.functions import ExtractHour
+        hourly = month_ints.filter(intervention_type='phone').annotate(
+            hour=ExtractHour('datetime')
+        ).values('hour').annotate(
+            calls=Count('id')
+        ).order_by('hour')
+        hourly_data = [{'hour': f"{h['hour']:02d}:00", 'calls': h['calls']} for h in hourly]
+        
+        # === Активные назначения ===
         active_assignments = Assignment.objects.filter(
             operator=operator,
-            is_active=True
+            overdue_days__gt=0
         ).count()
         
-        # Compliance статус
-        compliance_alerts = ComplianceAlert.objects.filter(
-            operator=operator,
-            is_resolved=False
-        ).count()
+        # === Топ обещаний (за 30 дней) ===
+        top_promises = list(
+            month_ints.filter(status='promise', promise_amount__gt=0)
+            .select_related('client')
+            .order_by('-promise_amount')[:10]
+            .values('id', 'client__full_name', 'promise_amount', 'promise_date', 'datetime')
+        )
+        for p in top_promises:
+            p['promise_amount'] = float(p['promise_amount'])
+            p['datetime'] = p['datetime'].isoformat() if p['datetime'] else None
+            p['promise_date'] = p['promise_date'].isoformat() if p['promise_date'] else None
         
         return Response({
-            'operator_id': operator.id,
-            'operator_name': operator.full_name,
-            'today': {
-                'interventions': interventions_today,
-                'successful_contacts': successful_contacts,
-                'payments_collected': float(payments_today),
+            'operator': {
+                'id': operator.id,
+                'name': operator.full_name,
+                'role': operator.role,
+                'specialization': operator.specialization,
+                'hireDate': operator.hire_date.isoformat() if operator.hire_date else None,
+                'status': operator.status,
             },
-            'queue': {
-                'active_assignments': active_assignments,
+            'today': calc_stats(today_ints),
+            'week': calc_stats(week_ints),
+            'month': calc_stats(month_ints),
+            'allTime': {
+                'totalInterventions': all_interventions.count(),
+                'totalCollected': float(operator.total_collected),
+                'successRate': operator.success_rate,
             },
-            'compliance': {
-                'active_alerts': compliance_alerts,
-            }
+            'daily': daily_data,
+            'statusDistribution': status_dist,
+            'hourly': hourly_data,
+            'activeAssignments': active_assignments,
+            'topPromises': top_promises,
         })
