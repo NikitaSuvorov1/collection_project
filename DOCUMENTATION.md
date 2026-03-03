@@ -1,8 +1,8 @@
 # Техническая документация
 ## Система управления взысканием задолженности (Collection Management System)
 
-**Версия:** 2.0.0  
-**Дата:** Февраль 2026  
+**Версия:** 3.0.0  
+**Дата:** Март 2026  
 **Авторы:** Команда разработки
 
 ---
@@ -204,21 +204,38 @@ collection_app/
 │       │
 │       ├── ml/                  # ML модуль
 │       │   ├── loan_predictor.py      # Прогноз одобрения
+│       │   ├── overdue_predictor.py   # Прогноз просрочки
 │       │   ├── overdue_scoring.py     # Скоринг просрочки
 │       │   ├── psychotyping.py        # Психотипирование
 │       │   ├── next_best_action.py    # NBA рекомендации
 │       │   ├── return_forecast.py     # Прогноз возврата
 │       │   ├── smart_scripts.py       # Умные скрипты
+│       │   ├── compliance.py          # Compliance-проверки
+│       │   ├── pipeline.py            # ML pipeline
+│       │   ├── application_approval.py # Одобрение заявок
 │       │   └── saved_models/          # Сохранённые модели
 │       │
 │       ├── services/            # Бизнес-логика
-│       │   └── distribution.py  # Распределение должников
+│       │   ├── distribution.py  # Распределение должников
+│       │   ├── collection_service.py # Сервис взыскания
+│       │   └── workflow_service.py   # Workflow Engine
+│       │
+│       ├── middleware/          # Middleware
+│       │   ├── __init__.py
+│       │   └── security.py     # Rate limiting, Security headers
 │       │
 │       ├── management/          # Django команды
 │       │   └── commands/
 │       │       ├── populate_db.py
+│       │       ├── populate_dashboard_data.py
+│       │       ├── populate_missing_data.py
+│       │       ├── distribute_clients.py
 │       │       ├── run_scoring.py
-│       │       └── train_loan_model.py
+│       │       ├── train_loan_model.py
+│       │       ├── train_approval_model.py
+│       │       ├── train_overdue_model.py
+│       │       ├── generate_training_data.py
+│       │       └── generate_killer_features_data.py
 │       │
 │       ├── migrations/          # Миграции БД
 │       └── fixtures/            # Тестовые данные
@@ -239,6 +256,7 @@ collection_app/
 │       ├── Client360Page.jsx   # Профиль клиента 360°
 │       ├── CollectionDeskApp.jsx # Рабочий стол оператора
 │       ├── LoanPredictionPage.jsx # Прогноз одобрения
+│       ├── OverduePredictionPage.jsx # Прогноз просрочки
 │       └── DatabaseViewPage.jsx # Просмотр БД
 │
 ├── docker-compose.yml          # Docker конфигурация
@@ -254,41 +272,54 @@ collection_app/
 ### 5.1 ER-диаграмма
 
 ```
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│     Client      │       │     Credit      │       │    Payment      │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ PK id           │<──┐   │ PK id           │<──┐   │ PK id           │
-│    first_name   │   │   │ FK client_id    │───┘   │ FK credit_id    │───┐
-│    last_name    │   └───│    principal    │       │    amount       │   │
-│    middle_name  │       │    interest_rate│       │    payment_date │   │
-│    phone        │       │    term_months  │       │    payment_type │   │
-│    email        │       │    status       │       │    status       │   │
-│    birth_date   │       │    product_type │       └─────────────────┘   │
-│    gender       │       │    open_date    │                             │
-│    income       │       │    close_date   │       ┌─────────────────┐   │
-│    employment   │       └─────────────────┘       │  CreditState    │   │
-│    address      │                │                ├─────────────────┤   │
-│    segment      │                │                │ PK id           │   │
-└─────────────────┘                │                │ FK credit_id    │───┤
-                                   │                │    report_date  │   │
-┌─────────────────┐                │                │    current_bal  │   │
-│    Operator     │                │                │    overdue_amt  │   │
-├─────────────────┤                │                │    days_past_due│   │
-│ PK id           │<───┐           │                │    bucket       │   │
-│    full_name    │    │           │                └─────────────────┘   │
-│    role         │    │           │                                      │
-│    status       │    │           v                                      │
-│    current_load │    │   ┌─────────────────┐                           │
-│    max_load     │    │   │  Interaction    │                           │
-└─────────────────┘    │   ├─────────────────┤                           │
-                       │   │ PK id           │                           │
-                       └───│ FK operator_id  │                           │
-                           │ FK credit_id    │───────────────────────────┘
-                           │    type         │
-                           │    result       │
-                           │    notes        │
-                           │    datetime     │
-                           └─────────────────┘
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│       Client        │     │       Credit        │     │      Payment        │
+├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
+│ PK id               │<──┐ │ PK id               │<──┐ │ PK id               │
+│    full_name        │   │ │ FK client_id        │───┘ │ FK credit_id        │───┐
+│    birth_date       │   └─│    principal_amount  │     │    amount           │   │
+│    gender           │     │    interest_rate     │     │    payment_date     │   │
+│    marital_status   │     │    monthly_payment   │     │    payment_type     │   │
+│    employment       │     │    product_type      │     │    planned_date     │   │
+│    employer_name    │     │    status            │     │    min_payment      │   │
+│    position         │     │    open_date         │     │    overdue_days     │   │
+│    income           │     │    planned_close_date│     └─────────────────────┘   │
+│    children_count   │     │    actuality_date    │                               │
+│    city             │     └─────────────────────┘     ┌─────────────────────┐   │
+│    region           │              │                  │    CreditState      │   │
+│    phone_mobile     │              │                  ├─────────────────────┤   │
+│    phone_work       │              │                  │ PK id               │   │
+│    phone_home       │              │                  │ FK credit_id        │───┤
+│    monthly_expenses │              │                  │ FK client_id        │   │
+│    category         │              │                  │    state_date       │   │
+└─────────────────────┘              │                  │    principal_debt   │   │
+                                     │                  │    overdue_principal│   │
+┌─────────────────────┐              │                  │    overdue_interest │   │
+│     Operator        │              │                  │    penalties        │   │
+├─────────────────────┤              │                  │    overdue_days     │   │
+│ PK id               │<───┐        │                  └─────────────────────┘   │
+│    full_name        │    │        │                                             │
+│    role             │    │        │                  ┌─────────────────────┐    │
+│    specialization   │    │        │                  │    Assignment       │    │
+│    status           │    │        │                  ├─────────────────────┤    │
+│    current_load     │    │        │                  │ PK id               │    │
+│    max_load         │    │        │                  │ FK operator_id      │────┤
+│    success_rate     │    │        │                  │ FK client_id        │    │
+│    total_collected  │    │        v                  │ FK credit_id        │    │
+└─────────────────────┘    │ ┌─────────────────────┐  │    overdue_amount   │    │
+                           │ │   Intervention      │  │    overdue_days     │    │
+                           │ ├─────────────────────┤  │    priority         │    │
+                           │ │ PK id               │  │    assignment_date  │    │
+                           └─│ FK operator_id      │  └─────────────────────┘    │
+                             │ FK client_id        │                              │
+                             │ FK credit_id        │──────────────────────────────┘
+                             │    datetime         │
+                             │    intervention_type│
+                             │    status           │
+                             │    duration         │
+                             │    promise_amount   │
+                             │    notes            │
+                             └─────────────────────┘
 ```
 
 ### 5.2 Описание сущностей
@@ -297,26 +328,33 @@ collection_app/
 
 ```python
 class Client(models.Model):
-    """Модель клиента банка"""
+    """Клиент (5000 записей)"""
     
     # Персональные данные
-    first_name = models.CharField(max_length=100)      # Имя
-    last_name = models.CharField(max_length=100)       # Фамилия
-    middle_name = models.CharField(max_length=100)     # Отчество
-    phone = models.CharField(max_length=20)            # Телефон
-    email = models.EmailField()                        # Email
+    full_name = models.CharField(max_length=300)       # ФИО
     birth_date = models.DateField()                    # Дата рождения
     gender = models.CharField(max_length=1)            # Пол (M/F)
+    marital_status = models.CharField(max_length=20)   # Семейное положение
     
-    # Финансовые данные
+    # Занятость и доход
+    employment = models.CharField(max_length=20)       # Тип занятости
+    employer_name = models.CharField(max_length=300)   # Место работы
+    position = models.CharField(max_length=200)        # Должность
     income = models.DecimalField()                     # Доход
-    employment = models.CharField()                    # Тип занятости
+    monthly_expenses = models.DecimalField()           # Ежемесячные расходы
+    children_count = models.IntegerField()             # Количество детей
+    
+    # Контакты
+    phone_mobile = models.CharField(max_length=32)     # Телефон (мобильный)
+    phone_work = models.CharField(max_length=32)       # Телефон (рабочий)
+    phone_home = models.CharField(max_length=32)       # Телефон (домашний)
     
     # Адрес
-    address = models.TextField()                       # Адрес
+    city = models.CharField(max_length=200)            # Город
+    region = models.CharField(max_length=200)          # Регион
     
-    # Сегментация
-    segment = models.CharField()                       # Сегмент клиента
+    # Категория
+    category = models.CharField(max_length=20)         # Категория клиента
 ```
 
 **Допустимые значения:**
@@ -324,51 +362,59 @@ class Client(models.Model):
 | Поле | Значения |
 |------|----------|
 | gender | `M` - мужской, `F` - женский |
+| marital_status | `single`, `married`, `divorced`, `widowed` |
 | employment | `employed`, `self_employed`, `unemployed`, `retired`, `student` |
-| segment | `vip`, `standard`, `problem`, `new` |
+| category | `standard`, `vip`, `problem`, `new` |
 
 #### 5.2.2 Credit (Кредит)
 
 ```python
 class Credit(models.Model):
-    """Модель кредитного договора"""
+    """Кредит (700 записей)"""
     
     client = models.ForeignKey(Client)                 # Клиент
-    principal_amount = models.DecimalField()           # Сумма кредита
+    principal_amount = models.DecimalField()           # Взятая сумма
     interest_rate = models.DecimalField()              # Процентная ставка
-    term_months = models.IntegerField()                # Срок в месяцах
     monthly_payment = models.DecimalField()            # Ежемесячный платёж
     
     product_type = models.CharField()                  # Тип продукта
     status = models.CharField()                        # Статус
     
-    open_date = models.DateField()                     # Дата выдачи
-    close_date = models.DateField(null=True)           # Дата закрытия
-    next_payment_date = models.DateField()             # След. платёж
+    open_date = models.DateField()                     # Дата открытия
+    planned_close_date = models.DateField(null=True)   # Плановая дата закрытия
+    actuality_date = models.DateField(null=True)       # Дата актуальности
 ```
+
+> **Примечание:** Поле `term_months` не хранится в модели — оно вычисляется в `CreditSerializer` как `round((planned_close_date - open_date).days / 30.44)`.
 
 **Допустимые значения:**
 
 | Поле | Значения |
 |------|----------|
-| product_type | `consumer` - потребительский, `mortgage` - ипотека, `auto` - автокредит, `credit_card` - кредитная карта |
-| status | `active` - активный, `overdue` - просрочка, `default` - дефолт, `closed` - закрыт, `restructured` - реструктуризирован |
+| product_type | `consumer` - потребительский, `mortgage` - ипотека, `car` - автокредит, `credit_card` - кредитная карта, `microloan` - микрозайм |
+| status | `active` - активный, `overdue` - просрочка, `default` - дефолт, `closed` - закрыт, `restructured` - реструктуризирован, `legal` - в суде, `sold` - продан, `written_off` - списан |
 
 #### 5.2.3 CreditState (Состояние кредита)
 
 ```python
 class CreditState(models.Model):
-    """Историческое состояние кредита на дату"""
+    """Состояние кредита (~21000 записей, помесячная прогрессия)"""
     
-    credit = models.ForeignKey(Credit)                 # Кредит
-    report_date = models.DateField()                   # Дата отчёта
-    current_balance = models.DecimalField()            # Остаток долга
-    overdue_amount = models.DecimalField()             # Просроченная сумма
-    days_past_due = models.IntegerField()              # Дней просрочки
-    bucket = models.CharField()                        # Bucket
+    credit = models.ForeignKey(Credit)                        # Кредит
+    client = models.ForeignKey(Client, null=True)             # Клиент
+    state_date = models.DateField()                           # Дата состояния
+    planned_payment_date = models.DateField(null=True)        # Плановая дата платежа
+    principal_debt = models.DecimalField()                    # Основной долг
+    overdue_principal = models.DecimalField()                 # Просроченный основной долг
+    interest = models.DecimalField()                          # Проценты
+    overdue_interest = models.DecimalField()                  # Просроченные проценты
+    penalties = models.DecimalField()                         # Штрафы
+    overdue_start_date = models.DateField(null=True)          # Дата начала просрочки
+    overdue_days = models.IntegerField()                      # Длительность просрочки (дней)
+    overdue_close_date = models.DateField(null=True)          # Дата закрытия просрочки
 ```
 
-**Bucket классификация:**
+**Bucket классификация (по overdue_days):**
 
 | Bucket | DPD (Days Past Due) | Описание |
 |--------|---------------------|----------|
@@ -383,44 +429,145 @@ class CreditState(models.Model):
 
 ```python
 class Payment(models.Model):
-    """Модель платежа по кредиту"""
+    """Платёж (~19000 записей)"""
     
     credit = models.ForeignKey(Credit)                 # Кредит
-    amount = models.DecimalField()                     # Сумма
     payment_date = models.DateField()                  # Дата платежа
+    amount = models.DecimalField()                     # Сумма платежа
     payment_type = models.CharField()                  # Тип платежа
-    status = models.CharField()                        # Статус
+    planned_date = models.DateField(null=True)         # Плановая дата
+    min_payment = models.DecimalField()                # Минимальный платёж
+    overdue_days = models.IntegerField()               # Просрочка по платежу (дней)
+    actuality_date = models.DateField(null=True)       # Дата актуальности
 ```
 
-#### 5.2.5 Interaction (Взаимодействие)
-
-```python
-class Interaction(models.Model):
-    """Модель взаимодействия с клиентом"""
-    
-    credit = models.ForeignKey(Credit)                 # Кредит
-    operator = models.ForeignKey(Operator)             # Оператор
-    interaction_type = models.CharField()              # Тип (звонок, SMS и т.д.)
-    interaction_date = models.DateTimeField()          # Дата/время
-    result = models.CharField()                        # Результат
-    notes = models.TextField()                         # Заметки
-    
-    # Для обещаний
-    promise_amount = models.DecimalField(null=True)    # Обещанная сумма
-    promise_date = models.DateField(null=True)         # Обещанная дата
-```
-
-**Результаты взаимодействия:**
+**Типы платежей:**
 
 | Код | Описание |
-|-----|----------|
-| `contact` | Состоялся контакт |
-| `no_answer` | Нет ответа |
-| `promise_to_pay` | Обещание оплатить |
-| `refuse` | Отказ платить |
-| `callback` | Просьба перезвонить |
-| `wrong_number` | Неверный номер |
-| `paid` | Оплачено |
+|-----|---------|
+| `regular` | Регулярный |
+| `early` | Досрочный |
+| `partial` | Частичный |
+| `penalty` | Штраф |
+
+#### 5.2.5 Intervention (Воздействие)
+
+```python
+class Intervention(models.Model):
+    """Воздействие по кредиту (10000 записей)"""
+    
+    client = models.ForeignKey(Client)                 # Клиент
+    credit = models.ForeignKey(Credit)                 # Кредит
+    operator = models.ForeignKey(Operator, null=True)  # Оператор
+    datetime = models.DateTimeField()                  # Дата и время
+    intervention_type = models.CharField()             # Тип воздействия
+    status = models.CharField()                        # Статус воздействия
+    duration = models.IntegerField()                   # Длительность (сек)
+    promise_amount = models.DecimalField()             # Сумма обещания
+    promise_date = models.DateField(null=True)         # Дата обещания
+    notes = models.TextField()                         # Комментарий
+    refusal_reason = models.CharField()                # Причина отказа
+```
+
+**Типы воздействий (intervention_type):**
+
+| Код | Описание |
+|-----|---------|
+| `phone` | Звонок |
+| `sms` | СМС |
+| `email` | Email |
+| `letter` | Письмо |
+| `visit` | Визит |
+
+**Статусы воздействий (status):**
+
+| Код | Описание |
+|-----|---------|
+| `completed` | Завершено |
+| `no_answer` | Не дозвон |
+| `promise` | Обещание |
+| `refuse` | Отказ |
+| `callback` | Перезвонить |
+
+#### 5.2.6 Assignment (Назначение)
+
+```python
+class Assignment(models.Model):
+    """Распределение работы на текущий день (3000 записей)"""
+    
+    operator = models.ForeignKey(Operator)             # Оператор
+    client = models.ForeignKey(Client, null=True)      # Клиент
+    credit = models.ForeignKey(Credit)                 # Кредит
+    debtor_name = models.CharField(max_length=300)     # ФИО должника
+    overdue_amount = models.DecimalField()             # Сумма просрочки
+    overdue_days = models.IntegerField()               # Срок просрочки (дней)
+    priority = models.IntegerField()                   # Приоритет воздействия
+    assignment_date = models.DateField()               # Дата назначения
+```
+
+#### 5.2.7 Operator (Оператор)
+
+```python
+class Operator(models.Model):
+    """Оператор (50 записей, ID 51-100)"""
+    
+    user = models.OneToOneField(User, null=True)       # Связь с User
+    full_name = models.CharField(max_length=200)       # ФИО
+    role = models.CharField()                          # Роль
+    specialization = models.CharField()                # Специализация
+    hire_date = models.DateField(null=True)            # Дата трудоустройства
+    current_load = models.IntegerField()               # Текущая нагрузка
+    max_load = models.IntegerField()                   # Максимальная нагрузка
+    success_rate = models.FloatField()                 # Показатель успешности
+    avg_call_duration = models.IntegerField()          # Средняя длительность звонка (сек)
+    total_collected = models.DecimalField()            # Всего собрано
+    status = models.CharField()                        # Статус оператора
+```
+
+**Роли операторов:**
+
+| Код | Описание |
+|-----|---------|
+| `junior_operator` | Джуниор оператор |
+| `operator` | Оператор |
+| `senior_operator` | Старший оператор |
+| `team_lead` | Тимлид |
+| `supervisor` | Супервайзер |
+| `legal_specialist` | Юрист |
+| `manager` | Менеджер |
+
+### 5.3 Характеристики данных
+
+#### 5.3.1 Объёмы данных
+
+| Сущность | Количество записей | Описание |
+|----------|-------------------|----------|
+| Client | 5 000 | Клиенты банка |
+| Credit | 700 | Кредитные договоры |
+| CreditState | ~21 000 | Помесячная прогрессия состояний |
+| Payment | ~19 000 | Платежи с реалистичным жизненным циклом |
+| Intervention | 10 000 | Воздействия по кредитам |
+| Operator | 50 | Операторы (ID 51-100) |
+| Assignment | 3 000 | Назначения на текущий день |
+
+#### 5.3.2 Процентные ставки по типам продуктов
+
+| Тип продукта | Диапазон ставок | Описание |
+|-------------|----------------|----------|
+| consumer | 12-25% | Потребительский кредит |
+| mortgage | 7-15% | Ипотека |
+| car | 10-20% | Автокредит |
+| credit_card | 22-36% | Кредитная карта |
+| microloan | 30-90% | Микрозайм |
+
+> Ежемесячные платежи рассчитаны по формуле **аннуитета** (см. раздел 7.2).
+
+#### 5.3.3 CreditState — помесячная прогрессия
+
+Для каждого кредита генерируется цепочка ежемесячных состояний от `open_date` до текущей даты:
+- Основной долг (`principal_debt`) убывает с каждым месяцем
+- Просрочка (`overdue_principal`, `overdue_interest`, `penalties`) начинается в точке 30-60% от длительности кредита
+- `overdue_days` нарастает после начала просрочки
 
 ---
 
@@ -432,7 +579,7 @@ class Interaction(models.Model):
 
 **Формат:** JSON
 
-**Аутентификация:** Token-based (для защищённых endpoints)
+**Аутентификация:** В текущей версии все API endpoints используют `AllowAny` (доступ без авторизации). Token-based аутентификация подготовлена для production.
 
 ### 6.2 Endpoints
 
@@ -451,17 +598,22 @@ class Interaction(models.Model):
 ```json
 {
   "id": 1,
-  "first_name": "Иван",
-  "last_name": "Иванов",
-  "middle_name": "Петрович",
-  "phone": "+7 (999) 123-45-67",
-  "email": "ivanov@mail.ru",
+  "full_name": "Иванов Иван Петрович",
   "birth_date": "1985-03-15",
   "gender": "M",
-  "income": "85000.00",
+  "marital_status": "married",
   "employment": "employed",
-  "address": "г. Москва, ул. Примерная, д. 1",
-  "segment": "standard"
+  "employer_name": "ООО Технологии",
+  "position": "Менеджер",
+  "income": "85000.00",
+  "monthly_expenses": "35000.00",
+  "children_count": 1,
+  "phone_mobile": "+7 (999) 123-45-67",
+  "phone_work": "+7 (495) 111-22-33",
+  "phone_home": "",
+  "city": "Москва",
+  "region": "Московская область",
+  "category": "standard"
 }
 ```
 
@@ -478,11 +630,8 @@ class Interaction(models.Model):
 
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| status | string | Фильтр по статусу |
+| status | string | Фильтр по статусу (поддерживает значения через запятую: `?status=overdue,default`) |
 | client | integer | ID клиента |
-| product_type | string | Тип продукта |
-| min_amount | decimal | Мин. сумма |
-| max_amount | decimal | Макс. сумма |
 
 **Пример ответа GET /api/credits/1/:**
 ```json
@@ -490,17 +639,29 @@ class Interaction(models.Model):
   "id": 1,
   "client": 1,
   "client_name": "Иванов Иван Петрович",
+  "client_phone": "+7 (999) 123-45-67",
   "principal_amount": "500000.00",
   "interest_rate": "18.50",
-  "term_months": 36,
   "monthly_payment": "18150.00",
   "product_type": "consumer",
   "status": "overdue",
   "open_date": "2024-03-15",
-  "close_date": null,
-  "next_payment_date": "2026-02-15"
+  "planned_close_date": "2027-03-15",
+  "actuality_date": "2026-03-01",
+  "term_months": 36,
+  "latest_state": {
+    "id": 123,
+    "state_date": "2026-03-01",
+    "principal_debt": "320000.00",
+    "overdue_principal": "45000.00",
+    "overdue_interest": "3200.00",
+    "penalties": "1500.00",
+    "overdue_days": 42
+  }
 }
 ```
+
+> **Примечание:** Поля `client_name`, `client_phone`, `term_months` и `latest_state` вычисляются в сериализаторе и не хранятся в модели.
 
 #### 6.2.3 Состояния кредитов
 
@@ -508,6 +669,9 @@ class Interaction(models.Model):
 |-------|-----|----------|
 | GET | `/api/credit-states/` | Все состояния |
 | GET | `/api/credit-states/?credit={id}` | Состояния кредита |
+| GET | `/api/credit-states/?client={id}` | Состояния по клиенту |
+
+> Сортировка по умолчанию: `-state_date` (новые сначала)
 
 #### 6.2.4 Платежи
 
@@ -515,15 +679,21 @@ class Interaction(models.Model):
 |-------|-----|----------|
 | GET | `/api/payments/` | Список платежей |
 | GET | `/api/payments/?credit={id}` | Платежи по кредиту |
+| GET | `/api/payments/?client={id}` | Платежи по клиенту |
 | POST | `/api/payments/` | Создать платёж |
 
-#### 6.2.5 Взаимодействия
+> Сортировка по умолчанию: `-payment_date` (новые сначала)
+
+#### 6.2.5 Воздействия (Interventions)
 
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/api/interventions/` | Список взаимодействий |
-| GET | `/api/interventions/?credit={id}` | Взаимодействия по кредиту |
-| POST | `/api/interventions/` | Создать взаимодействие |
+| GET | `/api/interventions/` | Список воздействий |
+| GET | `/api/interventions/?client_id={id}` | Воздействия по клиенту |
+| GET | `/api/interventions/?client={id}` | Воздействия по клиенту (алиас) |
+| POST | `/api/interventions/` | Создать воздействие |
+
+> Сортировка по умолчанию: `-datetime`. Поддерживает `?ordering=` для смены сортировки.
 
 #### 6.2.6 Заявки на кредит
 
@@ -580,8 +750,12 @@ class Interaction(models.Model):
 
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/api/assignments/` | Список назначений |
+| GET | `/api/assignments/` | Список назначений (только с overdue > 0) |
+| GET | `/api/assignments/?operator_id={id}` | Назначения оператора |
+| GET | `/api/assignments/?operator={id}` | Назначения оператора (алиас) |
 | POST | `/api/assignments/distribute/` | Запустить распределение |
+
+> Сортировка по умолчанию: `-priority, -overdue_amount`. Сериализатор дополняет каждое назначение полями: `operator_name`, `client_name`, `client_phone`, `client_id`, `last_promise_amount`, `last_promise_date`, `total_attempts`.
 
 ### 6.3 Коды ошибок
 
@@ -1788,18 +1962,22 @@ from collection_app.models import Client, Credit
 
 class CreditModelTest(TestCase):
     def setUp(self):
-        self.client = Client.objects.create(
-            first_name='Тест',
-            last_name='Тестов',
-            phone='+7 (999) 999-99-99'
+        self.client_obj = Client.objects.create(
+            full_name='Тестов Тест Тестович',
+            phone_mobile='+7 (999) 999-99-99',
+            gender='M',
+            employment='employed',
+            income=80000
         )
     
     def test_credit_creation(self):
         credit = Credit.objects.create(
-            client=self.client,
+            client=self.client_obj,
             principal_amount=100000,
             interest_rate=15.0,
-            term_months=12
+            monthly_payment=8000,
+            open_date='2024-01-15',
+            planned_close_date='2025-01-15'
         )
         self.assertEqual(credit.status, 'active')
     
@@ -2112,7 +2290,7 @@ actions = {
 
 ## 14. Roadmap развития
 
-### 14.1 Текущий статус (v2.0)
+### 14.1 Текущий статус (v3.0)
 
 | Компонент | Статус | Описание |
 |-----------|--------|----------|
@@ -2121,7 +2299,10 @@ actions = {
 | Security | ✅ Базовая | Rate limiting, Audit, Middleware |
 | Collection процессы | ✅ Полный цикл | Pre → Soft → Hard → Legal |
 | Workflow Engine | ✅ Реализован | Rules Engine с автопереходами |
-| Бизнес-логика | ⚠️ 70% | Базовые процессы есть |
+| Данные | ✅ Качество | ~21k CreditState, ~19k Payments, ставки по продуктам |
+| Рабочий стол оператора | ✅ Реализован | Персональная очередь, декомпозиция долга, навигация |
+| Client 360° | ✅ Реализован | Реальные API, NBA, история воздействий |
+| Бизнес-логика | ⚠️ 80% | Базовые процессы + рабочее место оператора |
 | Интеграции | ❌ Нет | SMS, CTI, БКИ — заглушки |
 | CI/CD | ❌ Нет | Требуется настройка |
 | Тесты | ⚠️ Минимальные | Нужно расширение |
@@ -2302,6 +2483,7 @@ actions = {
 |--------|------|----------|
 | 1.0.0 | 2026-02-05 | Начальная версия документации |
 | 2.0.0 | 2026-02-05 | Полный цикл Collection, RBAC, Workflow Engine, Security Middleware, BPMN, Roadmap |
+| 3.0.0 | 2026-03-15 | Обновление модели данных: Intervention вместо Interaction, CreditState с помесячной прогрессией (~21k записей), Payment с реалистичным жизненным циклом (~19k записей). Вычисляемые поля: term_months, latest_state, client_name, client_phone в CreditSerializer. Фильтры API: PaymentViewSet (?credit, ?client), CreditStateViewSet (?credit, ?client), AssignmentViewSet (?operator_id). Рабочий стол оператора: персональная очередь через Assignment, декомпозиция долга. Client360 — работа с реальными API вместо mock-данных. Процентные ставки по типам продуктов, аннуитетные платежи. |
 
 ---
 
