@@ -199,6 +199,17 @@ class Client(models.Model):
     ]
     category = models.CharField('Категория клиента', max_length=20, choices=CATEGORY_CHOICES, default='standard')
     created_at = models.DateTimeField('Дата добавления', auto_now_add=True, null=True)
+    
+    # === 230-ФЗ: Контроль согласия на контакт ===
+    contact_refused = models.BooleanField('Отказ от взаимодействия (230-ФЗ ст.8)', default=False)
+    contact_refused_date = models.DateField('Дата отказа', null=True, blank=True)
+    REFUSED_CHANNELS_HELP = 'JSON-список каналов, от которых клиент отказался (пустой = полный отказ). Пример: ["phone","sms"]'
+    refused_channels = models.JSONField('Каналы отказа', default=list, blank=True, help_text=REFUSED_CHANNELS_HELP)
+    is_bankrupt = models.BooleanField('Признан банкротом', default=False)
+    bankruptcy_date = models.DateField('Дата признания банкротом', null=True, blank=True)
+    # === 230-ФЗ ст.4: Согласие на взаимодействие с третьими лицами ===
+    third_party_consent = models.BooleanField('Согласие на контакт с третьими лицами', default=False)
+    third_party_consent_date = models.DateField('Дата согласия', null=True, blank=True)
 
     def __str__(self):
         return self.full_name
@@ -206,6 +217,12 @@ class Client(models.Model):
     class Meta:
         verbose_name = 'Клиент'
         verbose_name_plural = 'Клиенты'
+        indexes = [
+            models.Index(fields=['full_name'], name='idx_client_fullname'),
+            models.Index(fields=['phone_mobile'], name='idx_client_phone'),
+            models.Index(fields=['is_bankrupt'], name='idx_client_bankrupt'),
+            models.Index(fields=['contact_refused'], name='idx_client_refused'),
+        ]
 
 
 class Credit(models.Model):
@@ -882,6 +899,11 @@ class Intervention(models.Model):
     promise_date = models.DateField('Дата обещания', null=True, blank=True)
     notes = models.TextField('Комментарий оператора', blank=True, default='')
     refusal_reason = models.CharField('Причина отказа', max_length=200, blank=True, default='')
+    # === 230-ФЗ: Дополнительные требования ===
+    caller_number = models.CharField('Исходящий номер (ст.9 — запрет скрытых)', max_length=32, blank=True, default='')
+    operator_identified = models.BooleanField('Оператор представился (ст.6)', default=True)
+    approved_script_used = models.BooleanField('Использован утверждённый скрипт (ст.5)', default=True)
+    is_third_party = models.BooleanField('Контакт с третьим лицом', default=False)
 
     def __str__(self):
         return f"Воздействие #{self.id} - {self.intervention_type}"
@@ -889,6 +911,12 @@ class Intervention(models.Model):
     class Meta:
         verbose_name = 'Воздействие'
         verbose_name_plural = 'Воздействия'
+        indexes = [
+            models.Index(fields=['client', '-datetime'], name='idx_interv_client_dt'),
+            models.Index(fields=['operator', '-datetime'], name='idx_interv_op_dt'),
+            models.Index(fields=['status'], name='idx_interv_status'),
+            models.Index(fields=['credit'], name='idx_interv_credit'),
+        ]
 
 
 class Assignment(models.Model):
@@ -901,6 +929,15 @@ class Assignment(models.Model):
     overdue_days = models.IntegerField('Срок просрочки (дней)', default=0)
     priority = models.IntegerField('Приоритет воздействия', default=1)
     assignment_date = models.DateField('Дата')
+    
+    # A/B тестирование
+    AB_GROUP_CHOICES = [
+        ('A', 'Контрольная (обычное)'),
+        ('B', 'Экспериментальная (умное)'),
+    ]
+    ab_group = models.CharField('A/B группа', max_length=2, choices=AB_GROUP_CHOICES, default='B')
+    assignment_method = models.CharField('Метод назначения', max_length=30, default='smart')
+    match_score = models.FloatField('Качество матчинга', default=0)
 
     def __str__(self):
         return f"Задание #{self.id} - {self.debtor_name}"
@@ -908,6 +945,11 @@ class Assignment(models.Model):
     class Meta:
         verbose_name = 'Распределение работы'
         verbose_name_plural = 'Распределения работы'
+        indexes = [
+            models.Index(fields=['operator', 'assignment_date'], name='idx_assign_op_date'),
+            models.Index(fields=['credit'], name='idx_assign_credit'),
+            models.Index(fields=['ab_group'], name='idx_assign_ab'),
+        ]
 
 
 class ScoringResult(models.Model):
@@ -925,6 +967,18 @@ class ScoringResult(models.Model):
     ]
     risk_segment = models.CharField('Сегмент риска', max_length=20, choices=SEGMENT_CHOICES, default='medium')
     predicted_overdue_date = models.DateField('Прогнозируемая дата просрочки', null=True, blank=True)
+    
+    # === Расширения для полноценного скоринга ===
+    score_value = models.IntegerField('Скоринговый балл (300-850)', null=True, blank=True)
+    model_version = models.CharField('Версия модели', max_length=50, blank=True, default='')
+    model_type = models.CharField('Тип алгоритма', max_length=50, blank=True, default='')
+    roc_auc = models.FloatField('ROC-AUC модели', null=True, blank=True)
+    grade = models.CharField('Грейд (A-E)', max_length=2, blank=True, default='')
+    
+    # Экономическая модель
+    expected_recovery = models.DecimalField('Ожидаемый возврат (₽)', max_digits=12, decimal_places=2, default=0)
+    cost_per_contact = models.DecimalField('Стоимость контакта (₽)', max_digits=8, decimal_places=2, default=150)
+    expected_profit = models.DecimalField('Ожидаемая прибыль (₽)', max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         return f"Скоринг #{self.id} - {self.probability:.2%}"
@@ -932,6 +986,12 @@ class ScoringResult(models.Model):
     class Meta:
         verbose_name = 'Результат прогнозирования'
         verbose_name_plural = 'Результаты прогнозирования'
+        indexes = [
+            models.Index(fields=['client', '-calculation_date'], name='idx_scoring_client_date'),
+            models.Index(fields=['score_value'], name='idx_scoring_score'),
+            models.Index(fields=['risk_segment'], name='idx_scoring_segment'),
+            models.Index(fields=['model_version'], name='idx_scoring_version'),
+        ]
 
 
 class TrainingData(models.Model):
@@ -1611,3 +1671,111 @@ class OperatorStatistics(models.Model):
         verbose_name = 'Статистика оператора'
         verbose_name_plural = 'Статистика операторов'
         ordering = ['-period_start']
+
+
+class BankruptcyCheck(models.Model):
+    """Проверка банкротства клиента (ЕФРСБ)"""
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='bankruptcy_checks', verbose_name='Клиент')
+    check_date = models.DateTimeField('Дата проверки', auto_now_add=True)
+    is_bankrupt = models.BooleanField('Признан банкротом', default=False)
+    bankruptcy_case_number = models.CharField('Номер дела', max_length=100, blank=True, default='')
+    bankruptcy_date = models.DateField('Дата признания', null=True, blank=True)
+    source = models.CharField('Источник данных', max_length=100, default='ЕФРСБ')
+    details = models.JSONField('Детали проверки', default=dict, blank=True)
+
+    def __str__(self):
+        status = 'Банкрот' if self.is_bankrupt else 'Не банкрот'
+        return f"Проверка #{self.id} - {self.client.full_name}: {status}"
+
+    class Meta:
+        verbose_name = 'Проверка банкротства'
+        verbose_name_plural = 'Проверки банкротства'
+        ordering = ['-check_date']
+
+
+class MLModelVersion(models.Model):
+    """Версионирование ML-моделей"""
+    name = models.CharField('Название модели', max_length=100)
+    version = models.CharField('Версия', max_length=50)
+    model_type = models.CharField('Тип алгоритма', max_length=50)  # random_forest, gradient_boosting, logistic_regression
+    created_at = models.DateTimeField('Дата обучения', auto_now_add=True)
+    
+    # Метрики качества
+    accuracy = models.FloatField('Accuracy', default=0)
+    precision = models.FloatField('Precision', default=0)
+    recall = models.FloatField('Recall', default=0)
+    f1_score = models.FloatField('F1-Score', default=0)
+    roc_auc = models.FloatField('ROC-AUC', default=0)
+    
+    # Кросс-валидация
+    cv_mean = models.FloatField('CV Mean', default=0)
+    cv_std = models.FloatField('CV Std', default=0)
+    
+    # Параметры
+    hyperparameters = models.JSONField('Гиперпараметры', default=dict)
+    feature_names = models.JSONField('Признаки', default=list)
+    feature_importances = models.JSONField('Важность признаков', default=dict)
+    confusion_matrix = models.JSONField('Матрица ошибок', default=list)
+    
+    # ROC-кривая (точки для графика)
+    roc_curve_fpr = models.JSONField('ROC FPR', default=list)
+    roc_curve_tpr = models.JSONField('ROC TPR', default=list)
+    
+    training_data_size = models.IntegerField('Размер обучающей выборки', default=0)
+    is_active = models.BooleanField('Активная модель', default=True)
+    model_path = models.CharField('Путь к файлу модели', max_length=500, blank=True, default='')
+    
+    def __str__(self):
+        return f"{self.name} v{self.version} (ROC-AUC: {self.roc_auc:.4f})"
+
+    class Meta:
+        verbose_name = 'Версия ML-модели'
+        verbose_name_plural = 'Версии ML-моделей'
+        ordering = ['-created_at']
+
+
+class AuditLog(models.Model):
+    """Журнал аудита действий (логирование)"""
+    timestamp = models.DateTimeField('Время', auto_now_add=True, db_index=True)
+    
+    ACTION_CHOICES = [
+        ('intervention_create', 'Создание воздействия'),
+        ('intervention_update', 'Обновление воздействия'),
+        ('assignment_create', 'Назначение клиента'),
+        ('assignment_delete', 'Удаление назначения'),
+        ('scoring_run', 'Запуск скоринга'),
+        ('model_train', 'Обучение модели'),
+        ('distribution_run', 'Распределение клиентов'),
+        ('compliance_violation', 'Нарушение комплаенса'),
+        ('bankruptcy_check', 'Проверка банкротства'),
+        ('contact_blocked', 'Контакт заблокирован'),
+        ('login', 'Вход в систему'),
+        ('logout', 'Выход из системы'),
+    ]
+    action = models.CharField('Действие', max_length=50, choices=ACTION_CHOICES, db_index=True)
+    
+    operator = models.ForeignKey(Operator, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Оператор')
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Клиент')
+    
+    details = models.JSONField('Детали', default=dict)
+    ip_address = models.GenericIPAddressField('IP-адрес', null=True, blank=True)
+    
+    SEVERITY_CHOICES = [
+        ('info', 'Информация'),
+        ('warning', 'Предупреждение'),
+        ('error', 'Ошибка'),
+        ('critical', 'Критическое'),
+    ]
+    severity = models.CharField('Серьёзность', max_length=10, choices=SEVERITY_CHOICES, default='info')
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.action} - {self.operator}"
+
+    class Meta:
+        verbose_name = 'Запись аудита'
+        verbose_name_plural = 'Журнал аудита'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['action', '-timestamp'], name='idx_audit_action_ts'),
+            models.Index(fields=['operator', '-timestamp'], name='idx_audit_op_ts'),
+        ]

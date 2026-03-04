@@ -33,4 +33,23 @@ urlpatterns = [
     
     # ML prediction endpoints
     path('overdue-prediction/', views.OverduePredictionView.as_view(), name='overdue-prediction'),
+    
+    # 230-ФЗ Compliance
+    path('compliance/check/', views.ComplianceCheckView.as_view(), name='compliance-check'),
+    path('compliance/bankruptcy/', views.BankruptcyCheckView.as_view(), name='bankruptcy-check'),
+    path('compliance/summary/', views.ComplianceSummaryView.as_view(), name='compliance-summary'),
+    
+    # ML Models & Scoring
+    path('ml/models/', views.MLModelMetricsView.as_view(), name='ml-models'),
+    path('ml/models/<int:model_id>/', views.MLModelMetricsView.as_view(), name='ml-model-detail'),
+    path('scoring/dashboard/', views.ScoringDashboardView.as_view(), name='scoring-dashboard'),
+    
+    # A/B Testing
+    path('ab-test/results/', views.ABTestResultsView.as_view(), name='ab-test-results'),
+    
+    # Smart Distribution
+    path('distribution/run/', views.SmartDistributionView.as_view(), name='distribution-run'),
+    
+    # Audit Log
+    path('audit/', views.AuditLogView.as_view(), name='audit-log'),
 ]

@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import (
     Client, Credit, Payment, Intervention, Operator, ScoringResult, 
     Assignment, CreditApplication, CreditState, ClientBehaviorProfile,
-    NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast
+    NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast,
+    BankruptcyCheck, MLModelVersion, AuditLog,
 )
 from django.contrib.auth.models import User
 
@@ -243,3 +244,34 @@ class OperatorQueueSerializer(serializers.ModelSerializer):
                 'reasoning': nba.reasoning,
             }
         return None
+
+
+# ===== NEW MODELS SERIALIZERS =====
+
+class BankruptcyCheckSerializer(serializers.ModelSerializer):
+    client_name = serializers.CharField(source='client.full_name', read_only=True)
+
+    class Meta:
+        model = BankruptcyCheck
+        fields = '__all__'
+
+
+class MLModelVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MLModelVersion
+        fields = '__all__'
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    operator_name = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuditLog
+        fields = '__all__'
+
+    def get_operator_name(self, obj):
+        return obj.operator.full_name if obj.operator else None
+
+    def get_client_name(self, obj):
+        return obj.client.full_name if obj.client else None

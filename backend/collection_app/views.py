@@ -2,21 +2,24 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Sum, Count, Q
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
 from datetime import timedelta
 
 from .models import (
     Client, Credit, Payment, Intervention, Operator, ScoringResult, 
     Assignment, CreditApplication, CreditState, ClientBehaviorProfile,
-    NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast
+    NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast,
+    BankruptcyCheck, MLModelVersion, AuditLog,
 )
 from .serializers import (
     ClientSerializer, CreditSerializer, PaymentSerializer, InterventionSerializer,
     OperatorSerializer, ScoringResultSerializer, AssignmentSerializer, CreditApplicationSerializer,
     Client360Serializer, ClientBehaviorProfileSerializer, NextBestActionSerializer,
     SmartScriptSerializer, ComplianceAlertSerializer, ReturnForecastSerializer,
-    OperatorQueueSerializer, CreditStateSerializer
+    OperatorQueueSerializer, CreditStateSerializer,
+    BankruptcyCheckSerializer, MLModelVersionSerializer, AuditLogSerializer,
 )
 from .ml.next_best_action import NextBestActionService
 from .ml.psychotyping import PsychotypingService
@@ -25,6 +28,7 @@ from .ml.compliance import ComplianceService
 from .ml.smart_scripts import SmartScriptService
 from .ml.loan_predictor import predict_loan_approval, get_predictor
 from .ml.overdue_predictor import predict_risk, predict_risk_batch
+from .services.compliance_230fz import can_contact, log_compliance_violation, check_bankruptcy, validate_intervention, get_compliance_summary
 
 
 class IsDBAdmin(permissions.BasePermission):
@@ -130,7 +134,56 @@ class InterventionViewSet(viewsets.ModelViewSet):
         return qs.order_by(ordering)
     
     def perform_create(self, serializer):
+        # === 230-ФЗ: Предварительная проверка перед созданием интервенции ===
+        client_id = serializer.validated_data.get('client_id') or (
+            serializer.validated_data.get('client').id if serializer.validated_data.get('client') else None
+        )
+        contact_type = serializer.validated_data.get('intervention_type', 'phone')
+        operator_id = serializer.validated_data.get('operator_id') or (
+            serializer.validated_data.get('operator').id if serializer.validated_data.get('operator') else None
+        )
+
+        if client_id:
+            result = can_contact(client_id, contact_type)
+            if not result['allowed']:
+                # Логируем блокировку
+                if operator_id:
+                    log_compliance_violation(client_id, operator_id, result['violations'])
+                # Аудит
+                AuditLog.objects.create(
+                    action='contact_blocked',
+                    operator_id=operator_id,
+                    client_id=client_id,
+                    severity='warning',
+                    details={
+                        'reason': result['reason'],
+                        'violations': result['violations'],
+                        'contact_type': contact_type,
+                    },
+                )
+                raise DRFValidationError({
+                    'compliance_error': True,
+                    'message': f'230-ФЗ: {result["reason"]}',
+                    'violations': result['violations'],
+                    'limits': result.get('limits'),
+                    'counts': result.get('counts'),
+                })
+
         intervention = serializer.save()
+
+        # Аудит: успешное создание
+        AuditLog.objects.create(
+            action='intervention_create',
+            operator_id=operator_id,
+            client_id=client_id,
+            severity='info',
+            details={
+                'intervention_id': intervention.id,
+                'type': contact_type,
+                'status': intervention.status,
+            },
+        )
+
         # Проверка compliance после создания интервенции
         try:
             compliance_service = ComplianceService()
@@ -138,7 +191,6 @@ class InterventionViewSet(viewsets.ModelViewSet):
                 alerts = compliance_service.check_intervention(intervention)
         except Exception:
             pass  # Compliance check is optional
-        # Алерты автоматически сохраняются сервисом
 
 
 class OperatorViewSet(viewsets.ModelViewSet):
@@ -183,6 +235,10 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         
         # Only show assignments with overdue > 0
         qs = qs.filter(overdue_days__gt=0)
+        
+        # 230-ФЗ: исключаем банкротов и отказавшихся от контактов
+        qs = qs.exclude(credit__client__is_bankrupt=True)
+        qs = qs.exclude(credit__client__contact_refused=True)
         
         return qs.order_by('-priority', '-overdue_amount')
     
@@ -996,4 +1052,362 @@ class OperatorStatsView(APIView):
             'hourly': hourly_data,
             'activeAssignments': active_assignments,
             'topPromises': top_promises,
+        })
+
+
+# ===== 230-ФЗ COMPLIANCE API =====
+
+class ComplianceCheckView(APIView):
+    """
+    Проверка возможности контакта с клиентом по 230-ФЗ.
+
+    GET /api/compliance/check/?client_id=123&type=phone
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        client_id = request.query_params.get('client_id')
+        contact_type = request.query_params.get('type', 'phone')
+        if not client_id:
+            return Response({'error': 'client_id обязателен'}, status=400)
+        result = can_contact(int(client_id), contact_type)
+        return Response(result)
+
+
+class BankruptcyCheckView(APIView):
+    """
+    Проверка и регистрация банкротства клиента.
+
+    GET  /api/compliance/bankruptcy/?client_id=123
+    POST /api/compliance/bankruptcy/  {client_id, is_bankrupt, case_number?}
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        client_id = request.query_params.get('client_id')
+        if not client_id:
+            return Response({'error': 'client_id обязателен'}, status=400)
+        result = check_bankruptcy(int(client_id))
+        return Response(result)
+
+    def post(self, request):
+        client_id = request.data.get('client_id')
+        is_bankrupt = request.data.get('is_bankrupt', False)
+        case_number = request.data.get('case_number', '')
+        if not client_id:
+            return Response({'error': 'client_id обязателен'}, status=400)
+        try:
+            client = Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({'error': 'Клиент не найден'}, status=404)
+
+        client.is_bankrupt = is_bankrupt
+        if is_bankrupt:
+            client.bankruptcy_date = timezone.now().date()
+        client.save()
+
+        BankruptcyCheck.objects.create(
+            client=client,
+            is_bankrupt=is_bankrupt,
+            case_number=case_number,
+            source='manual',
+        )
+
+        AuditLog.objects.create(
+            action='bankruptcy_check',
+            client_id=client_id,
+            severity='critical' if is_bankrupt else 'info',
+            details={'is_bankrupt': is_bankrupt, 'case_number': case_number},
+        )
+
+        return Response({'status': 'ok', 'is_bankrupt': is_bankrupt})
+
+
+class ComplianceSummaryView(APIView):
+    """
+    Сводка по соблюдению 230-ФЗ для дашборда руководителя.
+
+    GET /api/compliance/summary/
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response(get_compliance_summary())
+
+
+# ===== ML MODEL METRICS & VERSIONING API =====
+
+class MLModelMetricsView(APIView):
+    """
+    Метрики ML-моделей: ROC-AUC, feature importances, ROC-кривая, сравнение версий.
+
+    GET /api/ml/models/                  — все версии
+    GET /api/ml/models/?active=true      — только активные
+    GET /api/ml/models/<id>/             — конкретная версия
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, model_id=None):
+        if model_id:
+            try:
+                mv = MLModelVersion.objects.get(id=model_id)
+            except MLModelVersion.DoesNotExist:
+                return Response({'error': 'Модель не найдена'}, status=404)
+            return Response(MLModelVersionSerializer(mv).data)
+
+        qs = MLModelVersion.objects.all().order_by('-created_at')
+        active_only = request.query_params.get('active')
+        if active_only == 'true':
+            qs = qs.filter(is_active=True)
+        return Response(MLModelVersionSerializer(qs, many=True).data)
+
+
+# ===== A/B TESTING API =====
+
+class ABTestResultsView(APIView):
+    """
+    Результаты A/B-тестирования алгоритмов распределения.
+
+    GET /api/ab-test/results/?period=month
+    Сравнивает группы A (случайное) и B (умное) по ключевым метрикам.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'month')
+        today = timezone.now().date()
+        if period == 'day':
+            start = today
+        elif period == 'week':
+            start = today - timedelta(days=7)
+        else:
+            start = today - timedelta(days=30)
+
+        groups = {}
+        for group_label in ['A', 'B']:
+            assigns = Assignment.objects.filter(
+                ab_group=group_label,
+                assigned_at__date__gte=start,
+            )
+            total = assigns.count()
+            if total == 0:
+                groups[group_label] = {
+                    'total_assignments': 0,
+                    'message': 'Нет данных',
+                }
+                continue
+
+            # Кредиты, связанные с назначениями
+            credit_ids = list(assigns.values_list('credit_id', flat=True))
+
+            # Интервенции по этим кредитам за период
+            interventions = Intervention.objects.filter(
+                credit_id__in=credit_ids,
+                datetime__date__gte=start,
+            )
+            total_calls = interventions.filter(intervention_type='phone').count()
+            contacts = interventions.filter(
+                intervention_type='phone',
+                status__in=['completed', 'promise', 'refuse', 'callback'],
+            ).count()
+            promises = interventions.filter(status='promise').count()
+            promise_amt = float(interventions.filter(status='promise').aggregate(
+                s=Sum('promise_amount')
+            )['s'] or 0)
+
+            contact_rate = round(contacts / total_calls * 100, 1) if total_calls > 0 else 0
+            promise_rate = round(promises / contacts * 100, 1) if contacts > 0 else 0
+
+            # Средний match_score
+            avg_match = assigns.aggregate(avg=Avg('match_score'))['avg'] or 0
+
+            groups[group_label] = {
+                'total_assignments': total,
+                'total_calls': total_calls,
+                'contacts': contacts,
+                'contact_rate': contact_rate,
+                'promises': promises,
+                'promise_rate': promise_rate,
+                'promise_amount': promise_amt,
+                'avg_match_score': round(float(avg_match), 2),
+            }
+
+        # Статистический вывод
+        a = groups.get('A', {})
+        b = groups.get('B', {})
+        lift = None
+        if a.get('contact_rate', 0) > 0 and b.get('contact_rate', 0) > 0:
+            lift = round((b['contact_rate'] - a['contact_rate']) / a['contact_rate'] * 100, 1)
+
+        return Response({
+            'period': period,
+            'start_date': start.isoformat(),
+            'groups': groups,
+            'lift_contact_rate_pct': lift,
+            'conclusion': (
+                f'Группа B (smart) показывает {"+" if lift and lift > 0 else ""}'
+                f'{lift}% к contact rate по сравнению с группой A (random)'
+            ) if lift else 'Недостаточно данных',
+        })
+
+
+# ===== SMART DISTRIBUTION API =====
+
+class SmartDistributionView(APIView):
+    """
+    Запуск интеллектуального распределения клиентов по операторам.
+
+    POST /api/distribution/run/  {strategy: 'smart'|'random'|'round_robin', ab_test: true}
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from .services.distribution import DistributionService
+
+        strategy = request.data.get('strategy', 'smart')
+        ab_test = request.data.get('ab_test', False)
+
+        svc = DistributionService()
+
+        # Кредиты без оператора, исключая банкротов
+        unassigned = Credit.objects.filter(
+            status__in=['overdue', 'default'],
+        ).exclude(
+            client__is_bankrupt=True,
+        ).exclude(
+            client__contact_refused=True,
+        ).exclude(
+            id__in=Assignment.objects.filter(overdue_days__gt=0).values_list('credit_id', flat=True),
+        )
+
+        results = {'assigned': 0, 'skipped': 0, 'errors': []}
+
+        for credit in unassigned[:200]:
+            try:
+                rec = svc.get_recommended_operator(credit)
+                if not rec:
+                    results['skipped'] += 1
+                    continue
+
+                ab_group = 'B' if strategy == 'smart' else 'A'
+                if ab_test:
+                    import random
+                    ab_group = random.choice(['A', 'B'])
+
+                Assignment.objects.create(
+                    credit=credit,
+                    operator=rec['operator'],
+                    assigned_at=timezone.now(),
+                    priority=rec.get('priority', 'medium'),
+                    overdue_amount=credit.states.order_by('-state_date').first().overdue_principal if credit.states.exists() else 0,
+                    overdue_days=credit.states.order_by('-state_date').first().overdue_days if credit.states.exists() else 0,
+                    ab_group=ab_group,
+                    assignment_method=strategy,
+                    match_score=rec.get('score', 0),
+                )
+                results['assigned'] += 1
+            except Exception as e:
+                results['errors'].append(str(e))
+
+        AuditLog.objects.create(
+            action='distribution_run',
+            severity='info',
+            details={
+                'strategy': strategy,
+                'ab_test': ab_test,
+                'assigned': results['assigned'],
+                'skipped': results['skipped'],
+            },
+        )
+
+        return Response(results)
+
+
+# ===== AUDIT LOG API =====
+
+class AuditLogView(APIView):
+    """
+    Журнал аудита действий в системе.
+
+    GET /api/audit/?action=contact_blocked&limit=100
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        qs = AuditLog.objects.all().order_by('-timestamp')
+
+        action_filter = request.query_params.get('action')
+        if action_filter:
+            qs = qs.filter(action=action_filter)
+
+        severity_filter = request.query_params.get('severity')
+        if severity_filter:
+            qs = qs.filter(severity=severity_filter)
+
+        operator_id = request.query_params.get('operator_id')
+        if operator_id:
+            qs = qs.filter(operator_id=operator_id)
+
+        client_id = request.query_params.get('client_id')
+        if client_id:
+            qs = qs.filter(client_id=client_id)
+
+        limit = int(request.query_params.get('limit', 100))
+        qs = qs[:limit]
+
+        return Response(AuditLogSerializer(qs, many=True).data)
+
+
+# ===== SCORING RESULTS (enhanced) =====
+
+class ScoringDashboardView(APIView):
+    """
+    Дашборд скоринга: распределение баллов, грейдов, economic model.
+
+    GET /api/scoring/dashboard/
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        # Последние скоринги (один на клиента)
+        latest = ScoringResult.objects.filter(
+            score_value__isnull=False,
+        ).order_by('client', '-scoring_date').distinct('client') if hasattr(ScoringResult.objects, 'distinct') else ScoringResult.objects.filter(score_value__isnull=False).order_by('-scoring_date')
+
+        # SQLite не поддерживает distinct('client'), поэтому группируем вручную
+        all_scores = ScoringResult.objects.filter(score_value__isnull=False).order_by('-scoring_date')
+        seen_clients = set()
+        unique_scores = []
+        for sc in all_scores:
+            if sc.client_id not in seen_clients:
+                seen_clients.add(sc.client_id)
+                unique_scores.append(sc)
+
+        grade_dist = {}
+        score_histogram = {}
+        total_expected_profit = 0
+        total_expected_recovery = 0
+
+        for sc in unique_scores:
+            g = sc.grade or 'N/A'
+            grade_dist[g] = grade_dist.get(g, 0) + 1
+
+            bucket = ((sc.score_value or 0) // 50) * 50
+            key = f'{int(bucket)}-{int(bucket+49)}'
+            score_histogram[key] = score_histogram.get(key, 0) + 1
+
+            total_expected_profit += float(sc.expected_profit or 0)
+            total_expected_recovery += float(sc.expected_recovery or 0)
+
+        # Активная модель
+        active_model = MLModelVersion.objects.filter(is_active=True).first()
+        model_info = MLModelVersionSerializer(active_model).data if active_model else None
+
+        return Response({
+            'total_scored': len(unique_scores),
+            'grade_distribution': grade_dist,
+            'score_histogram': score_histogram,
+            'total_expected_profit': total_expected_profit,
+            'total_expected_recovery': total_expected_recovery,
+            'active_model': model_info,
         })

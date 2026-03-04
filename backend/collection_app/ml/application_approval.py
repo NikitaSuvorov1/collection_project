@@ -342,13 +342,27 @@ class CreditApprovalModel:
         # Корректировка вероятности по DTI — модель может ошибаться
         # на экстремальных значениях, которых мало в обучающей выборке
         dti = row.get('dti_ratio', 0)
+        dependents = row.get('dependents_count', 0)
         if dti > 1.0:
             # Расходы + платёж > дохода — сильный штраф
-            penalty = min(approved_prob * 0.7, 0.5)
+            penalty = min(approved_prob * 0.8, 0.6)
             approved_prob = max(0.02, approved_prob - penalty)
         elif dti > 0.7:
-            penalty = min(approved_prob * 0.3, 0.25)
+            # Высокая нагрузка — значительный штраф, пропорционально dti
+            severity = (dti - 0.7) / 0.3  # 0..1 для dti 0.7..1.0
+            penalty = approved_prob * (0.4 + severity * 0.3)
             approved_prob = max(0.05, approved_prob - penalty)
+        elif dti > 0.5:
+            penalty = approved_prob * 0.15
+            approved_prob = max(0.10, approved_prob - penalty)
+
+        # Штраф за большое количество иждивенцев
+        if dependents >= 5:
+            dep_penalty = min(approved_prob * 0.3, 0.2)
+            approved_prob = max(0.03, approved_prob - dep_penalty)
+        elif dependents >= 3:
+            dep_penalty = min(approved_prob * 0.1, 0.1)
+            approved_prob = max(0.05, approved_prob - dep_penalty)
 
         decision = 'approved' if approved_prob >= 0.5 else 'rejected'
         confidence = float(max(approved_prob, 1 - approved_prob))
@@ -374,29 +388,51 @@ class CreditApprovalModel:
         dti = row.get('dti_ratio', 0)
         income = row.get('total_income', 0)
         expenses = row.get('total_expenses', 0)
+        monthly_pay = row.get('monthly_payment_est', 0)
+        dependents = row.get('dependents_count', 0)
 
         # Расходы превышают доход — автоматический отказ
         if income > 0 and expenses >= income:
             factors.append(f'Расходы ({expenses:,.0f}) превышают доход ({income:,.0f})')
 
-        # Крайне высокая долговая нагрузка (>150%)
-        if dti > 1.5:
+        # Долговая нагрузка > 100% — автоматический отказ
+        if dti > 1.0:
             factors.append(f'Критическая долговая нагрузка: {dti:.0%}')
+
+        # Долговая нагрузка > 80% — автоматический отказ (ЦБ РФ порог)
+        if dti > 0.8 and not factors:
+            factors.append(f'Долговая нагрузка превышает 80%: {dti:.0%}')
 
         # Нет дохода при запросе кредита
         if income <= 0:
             factors.append('Нулевой доход')
 
-        # Ежемесячный платёж > 80% дохода
-        monthly_pay = row.get('monthly_payment_est', 0)
-        if income > 0 and monthly_pay > income * 0.8:
-            factors.append(f'Платёж ({monthly_pay:,.0f}) > 80% дохода ({income:,.0f})')
+        # Ежемесячный платёж > 50% дохода — высокий риск невозврата
+        if income > 0 and monthly_pay > income * 0.5:
+            factors.append(f'Платёж ({monthly_pay:,.0f}) > 50% дохода ({income:,.0f})')
+
+        # Располагаемый доход на человека < прожиточного минимума
+        family_size = 1 + dependents  # сам заёмщик + иждивенцы
+        if income > 0:
+            disposable = income - expenses - monthly_pay
+            per_capita = disposable / family_size if family_size > 0 else disposable
+            subsistence_minimum = 17000  # ₽ прожиточный минимум 2026
+            if per_capita < subsistence_minimum:
+                factors.append(
+                    f'Доход на члена семьи ({per_capita:,.0f} ₽) '
+                    f'ниже прожиточного минимума ({subsistence_minimum:,} ₽) '
+                    f'[семья: {family_size} чел.]'
+                )
+
+        # Много иждивенцев при невысоком доходе
+        if dependents >= 5 and income > 0 and income < 200000:
+            factors.append(f'Много иждивенцев ({dependents}) при доходе {income:,.0f} ₽')
 
         if factors:
             return {
-                'approved_probability': max(0.02, 0.15 - len(factors) * 0.04),
+                'approved_probability': max(0.02, 0.12 - len(factors) * 0.02),
                 'decision': 'rejected',
-                'confidence': 0.95,
+                'confidence': min(0.99, 0.85 + len(factors) * 0.03),
                 'risk_factors': factors,
                 'model_type': 'rule_override',
             }
@@ -428,11 +464,14 @@ class CreditApprovalModel:
         else:
             # DTI-штрафы
             if dti > 0.8:
-                score -= 0.35
+                score -= 0.45
                 factors.append(f'Очень высокая долговая нагрузка: {dti:.0%}')
             elif dti > 0.6:
-                score -= 0.2
+                score -= 0.3
                 factors.append(f'Высокая долговая нагрузка: {dti:.0%}')
+            elif dti > 0.4:
+                score -= 0.1
+                factors.append(f'Повышенная долговая нагрузка: {dti:.0%}')
             elif dti < 0.3:
                 score += 0.1
 
@@ -442,7 +481,10 @@ class CreditApprovalModel:
         if row.get('empl_unemployed') or row.get('empl_student'):
             score -= 0.2
             factors.append('Безработный/студент')
-        if row.get('dependents_count', 0) >= 4:
+        if row.get('dependents_count', 0) >= 5:
+            score -= 0.2
+            factors.append(f"Много иждивенцев: {row['dependents_count']}")
+        elif row.get('dependents_count', 0) >= 3:
             score -= 0.1
             factors.append(f"Много иждивенцев: {row['dependents_count']}")
         if row['has_collateral']:
