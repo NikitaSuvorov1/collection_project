@@ -13,6 +13,7 @@ import OperatorStatsPage from './OperatorStatsPage'
 import './styles.css'
 
 const SESSION_KEY = 'collection_user';
+const NAV_STATE_KEY = 'collection_nav';
 const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes in ms
 
 function Root() {
@@ -34,9 +35,17 @@ function Root() {
     }
     return null;
   });
-  const [page, setPage] = useState('desk');
-  const [creditId, setCreditId] = useState(null);
-  const [client360Id, setClient360Id] = useState(null);
+  // Restore navigation state from localStorage
+  const savedNav = (() => {
+    try {
+      const raw = localStorage.getItem(NAV_STATE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  })();
+
+  const [page, setPageRaw] = useState(savedNav.page || 'desk');
+  const [creditId, setCreditId] = useState(savedNav.creditId || null);
+  const [client360Id, setClient360Id] = useState(savedNav.client360Id || null);
 
   // Update last activity in localStorage
   const updateActivity = useCallback(() => {
@@ -105,7 +114,10 @@ function Root() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(NAV_STATE_KEY);
     setPage('desk');
+    setCreditId(null);
+    setClient360Id(null);
   };
 
   const handleCreditClick = (id, fromPage) => {
@@ -114,7 +126,7 @@ function Root() {
     setPage('creditDetail');
   };
 
-  const [prevPage, setPrevPage] = useState('credits');
+  const [prevPage, setPrevPage] = useState(savedNav.prevPage || 'credits');
 
   const handleBackToCredits = () => {
     setCreditId(null);
@@ -123,12 +135,27 @@ function Root() {
 
   const handleClient360 = (clientId) => {
     setClient360Id(clientId);
+    setPrevPageClient360(page);
     setPage('client360');
+  };
+
+  const [prevPageClient360, setPrevPageClient360] = useState(savedNav.prevPageClient360 || 'desk');
+
+  // Persist navigation state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(NAV_STATE_KEY, JSON.stringify({
+      page, creditId, client360Id, prevPage, prevPageClient360
+    }));
+  }, [page, creditId, client360Id, prevPage, prevPageClient360]);
+
+  // Wrapper for setPage that also clears stale detail IDs
+  const setPage = (newPage) => {
+    setPageRaw(newPage);
   };
 
   const handleBackFromClient360 = () => {
     setClient360Id(null);
-    setPage('desk');
+    setPage(prevPageClient360);
   };
 
   if (!user) {
@@ -154,8 +181,8 @@ function Root() {
       </nav>
       {page === 'desk' && <Desk user={user} onClient360={handleClient360} onCreditClick={(id) => handleCreditClick(id, 'desk')} />}
       {page === 'credits' && <CreditsPage onCreditClick={handleCreditClick} />}
-      {page === 'creditDetail' && creditId && <CreditDetailPage creditId={creditId} onBack={handleBackToCredits} />}
-      {page === 'creditDetailFromDesk' && creditId && <CreditDetailPage creditId={creditId} onBack={() => { setCreditId(null); setPage('desk'); }} />}
+      {page === 'creditDetail' && creditId && <CreditDetailPage creditId={creditId} onBack={handleBackToCredits} onClient360={handleClient360} />}
+      {page === 'creditDetailFromDesk' && creditId && <CreditDetailPage creditId={creditId} onBack={() => { setCreditId(null); setPage('desk'); }} onClient360={handleClient360} />}
       {page === 'dashboard' && isManager && <DashboardPage />}
       {page === 'client360' && <Client360Page clientId={client360Id} onBack={handleBackFromClient360} />}
       {page === 'prediction' && <LoanPredictionPage />}

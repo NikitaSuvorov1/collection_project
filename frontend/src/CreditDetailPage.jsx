@@ -35,7 +35,7 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('ru-RU'); 
 }
 
-export default function CreditDetailPage({ creditId, onBack }) {
+export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
   const [credit, setCredit] = useState(null);
   const [client, setClient] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -43,12 +43,34 @@ export default function CreditDetailPage({ creditId, onBack }) {
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [statesTab, setStatesTab] = useState('monthly'); // 'monthly' | 'daily'
+  const [dailyStates, setDailyStates] = useState([]);
+  const [dailyLoading, setDailyLoading] = useState(false);
+  const [dailyPage, setDailyPage] = useState(1);
+  const DAILY_PAGE_SIZE = 60;
+  const [riskPrediction, setRiskPrediction] = useState(null);
 
   useEffect(() => {
     if (creditId) {
       fetchCreditDetails();
     }
   }, [creditId]);
+
+  const fetchDailyStates = async () => {
+    if (dailyStates.length > 0) return; // already loaded
+    try {
+      setDailyLoading(true);
+      const res = await fetch(`${API_URL}/credit-daily-states/?credit=${creditId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDailyStates(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch daily states', e);
+    } finally {
+      setDailyLoading(false);
+    }
+  };
 
   const fetchCreditDetails = async () => {
     try {
@@ -93,6 +115,17 @@ export default function CreditDetailPage({ creditId, onBack }) {
         }
       }
 
+      // Загружаем прогноз просрочки
+      if (creditData.status !== 'closed') {
+        try {
+          const riskRes = await fetch(`${API_URL}/overdue-prediction/?credit_id=${creditId}`);
+          if (riskRes.ok) {
+            const riskData = await riskRes.json();
+            setRiskPrediction(riskData);
+          }
+        } catch (e) { /* прогноз не критичен */ }
+      }
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -127,6 +160,106 @@ export default function CreditDetailPage({ creditId, onBack }) {
 
   const isOverdue = ['overdue', 'default'].includes(credit.status);
 
+  // Build unified credit events timeline
+  const creditEvents = (() => {
+    const events = [];
+
+    // Payment events
+    payments.forEach(p => {
+      const isLate = p.overdue_days > 0;
+      events.push({
+        date: p.payment_date,
+        sortDate: new Date(p.payment_date),
+        type: 'payment',
+        icon: '💰',
+        label: PAYMENT_TYPE_LABELS[p.payment_type] || 'Платёж',
+        description: `${formatCurrency(p.amount)}${isLate ? ` (просрочка ${p.overdue_days} дн.)` : ''}`,
+        color: isLate ? '#d97706' : '#16a34a',
+        bgColor: isLate ? '#fffbeb' : '#f0fdf4',
+      });
+    });
+
+    // Overdue start/end events from credit states
+    const sortedStates = [...creditStates].sort((a, b) => new Date(a.state_date) - new Date(b.state_date));
+    let wasOverdue = false;
+    sortedStates.forEach((s, i) => {
+      const dpd = s.overdue_days || 0;
+      const overdueAmt = parseFloat(s.overdue_principal || 0) + parseFloat(s.overdue_interest || 0);
+      const isOd = dpd > 0 || overdueAmt > 0;
+
+      if (isOd && !wasOverdue) {
+        events.push({
+          date: s.state_date,
+          sortDate: new Date(s.state_date),
+          type: 'overdue_start',
+          icon: '🔴',
+          label: 'Начало просрочки',
+          description: `Просроч. ОД: ${formatCurrency(s.overdue_principal)}, DPD: ${dpd}`,
+          color: '#b91c1c',
+          bgColor: '#fef2f2',
+        });
+      }
+      if (!isOd && wasOverdue) {
+        events.push({
+          date: s.state_date,
+          sortDate: new Date(s.state_date),
+          type: 'overdue_end',
+          icon: '🟢',
+          label: 'Просрочка погашена',
+          description: 'Просроченная задолженность закрыта',
+          color: '#16a34a',
+          bgColor: '#f0fdf4',
+        });
+      }
+      // Penalty events
+      if (parseFloat(s.penalties || 0) > 0 && (i === 0 || parseFloat(sortedStates[i - 1].penalties || 0) === 0)) {
+        events.push({
+          date: s.state_date,
+          sortDate: new Date(s.state_date),
+          type: 'penalty',
+          icon: '⚠️',
+          label: 'Начисление штрафа',
+          description: `Штраф: ${formatCurrency(s.penalties)}`,
+          color: '#d97706',
+          bgColor: '#fffbeb',
+        });
+      }
+      wasOverdue = isOd;
+    });
+
+    // Credit open event
+    if (credit.open_date) {
+      events.push({
+        date: credit.open_date,
+        sortDate: new Date(credit.open_date),
+        type: 'open',
+        icon: '📋',
+        label: 'Выдача кредита',
+        description: `${PRODUCT_TYPES[credit.product_type] || credit.product_type}, ${formatCurrency(credit.principal_amount)}`,
+        color: '#2563eb',
+        bgColor: '#eff6ff',
+      });
+    }
+
+    // Credit close event
+    if (credit.status === 'closed') {
+      const lastState = sortedStates.length > 0 ? sortedStates[sortedStates.length - 1] : null;
+      events.push({
+        date: lastState ? lastState.state_date : credit.planned_close_date,
+        sortDate: new Date(lastState ? lastState.state_date : credit.planned_close_date),
+        type: 'closed',
+        icon: '✅',
+        label: 'Кредит закрыт',
+        description: 'Задолженность полностью погашена',
+        color: '#16a34a',
+        bgColor: '#f0fdf4',
+      });
+    }
+
+    events.sort((a, b) => b.sortDate - a.sortDate);
+    return events;
+  })();
+
   return (
     <div style={{background:'#fff', minHeight:'100vh'}}>
       
@@ -144,8 +277,20 @@ export default function CreditDetailPage({ creditId, onBack }) {
               {PRODUCT_TYPES[credit.product_type] || credit.product_type}
             </div>
           </div>
-          <div style={{color: isOverdue ? '#b91c1c' : '#525252', fontWeight:500, fontSize:'0.875rem'}}>
-            {STATUS_LABELS[credit.status] || credit.status}
+          <div style={{display:'flex', alignItems:'center', gap:12}}>
+            {client && onClient360 && (
+              <button
+                onClick={() => onClient360(client.id)}
+                style={{background:'#f5f5f5', border:'1px solid #e5e5e5', borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:'0.8rem', color:'#525252', fontWeight:500, display:'flex', alignItems:'center', gap:6}}
+                onMouseOver={e => { e.currentTarget.style.background='#e5e5e5'; }}
+                onMouseOut={e => { e.currentTarget.style.background='#f5f5f5'; }}
+              >
+                👤 Клиент 360°
+              </button>
+            )}
+            <div style={{color: isOverdue ? '#b91c1c' : '#525252', fontWeight:500, fontSize:'0.875rem'}}>
+              {STATUS_LABELS[credit.status] || credit.status}
+            </div>
           </div>
         </div>
       </div>
@@ -162,7 +307,7 @@ export default function CreditDetailPage({ creditId, onBack }) {
             {client ? (
               <table style={{width:'100%', fontSize:'0.875rem'}}>
                 <tbody>
-                  <tr><td style={{color:'#737373', padding:'6px 0', width:'45%'}}>ФИО</td><td style={{color:'#1a1a1a'}}>{client.full_name || '—'}</td></tr>
+                  <tr><td style={{color:'#737373', padding:'6px 0', width:'45%'}}>ФИО</td><td>{onClient360 ? <span onClick={() => onClient360(client.id)} style={{color:'#2563eb', cursor:'pointer', borderBottom:'1px dashed #2563eb'}}>{client.full_name || '—'}</span> : <span style={{color:'#1a1a1a'}}>{client.full_name || '—'}</span>}</td></tr>
                   <tr><td style={{color:'#737373', padding:'6px 0'}}>Телефон</td><td style={{color:'#1a1a1a'}}>{client.phone_mobile || client.phone_work || '—'}</td></tr>
                   <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата рождения</td><td style={{color:'#1a1a1a'}}>{formatDate(client.birth_date)}</td></tr>
                   <tr><td style={{color:'#737373', padding:'6px 0'}}>Город</td><td style={{color:'#1a1a1a'}}>{client.city || client.region || '—'}</td></tr>
@@ -230,6 +375,136 @@ export default function CreditDetailPage({ creditId, onBack }) {
         </div>
       )}
 
+      {/* Risk Prediction Widget */}
+      {riskPrediction && (
+        <div style={{borderBottom:'1px solid #e5e5e5'}}>
+          <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
+            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+              Прогноз просрочки (ML-модель)
+            </h2>
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'200px 1fr 1fr 1fr', gap:0}}>
+            {/* Risk gauge */}
+            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+              <div style={{
+                width:72, height:72, borderRadius:'50%',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                background: riskPrediction.risk_category === 0 ? '#f0fdf4' : riskPrediction.risk_category === 1 ? '#fffbeb' : '#fef2f2',
+                border: `3px solid ${riskPrediction.risk_category === 0 ? '#22c55e' : riskPrediction.risk_category === 1 ? '#eab308' : '#ef4444'}`,
+                marginBottom:8,
+              }}>
+                <span style={{fontSize:'1.4rem', fontWeight:700, color: riskPrediction.risk_category === 0 ? '#16a34a' : riskPrediction.risk_category === 1 ? '#ca8a04' : '#dc2626'}}>
+                  {riskPrediction.risk_score !== undefined ? (riskPrediction.risk_score * 100).toFixed(0) : '—'}
+                </span>
+              </div>
+              <div style={{fontSize:'0.82rem', fontWeight:600, color: riskPrediction.risk_category === 0 ? '#16a34a' : riskPrediction.risk_category === 1 ? '#ca8a04' : '#dc2626'}}>
+                {riskPrediction.risk_label || '—'}
+              </div>
+              <div style={{fontSize:'0.7rem', color:'#a3a3a3', marginTop:2}}>risk score</div>
+            </div>
+            {/* Probabilities */}
+            <div style={{padding:'24px 30px', borderRight:'1px solid #e5e5e5'}}>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Вероятности</div>
+              {riskPrediction.probabilities && Object.entries(riskPrediction.probabilities).map(([label, prob]) => (
+                <div key={label} style={{marginBottom:8}}>
+                  <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', marginBottom:3}}>
+                    <span style={{color:'#525252'}}>{label}</span>
+                    <span style={{fontWeight:600, color:'#1a1a1a'}}>{(prob * 100).toFixed(1)}%</span>
+                  </div>
+                  <div style={{height:6, background:'#f5f5f5', borderRadius:3, overflow:'hidden'}}>
+                    <div style={{
+                      height:'100%', borderRadius:3,
+                      width: `${prob * 100}%`,
+                      background: label === 'Низкий' ? '#22c55e' : label === 'Средний' ? '#eab308' : '#ef4444',
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Key features */}
+            <div style={{padding:'24px 30px', borderRight:'1px solid #e5e5e5'}}>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Ключевые признаки</div>
+              {riskPrediction.features && (
+                <table style={{fontSize:'0.78rem', width:'100%'}}>
+                  <tbody>
+                    {[
+                      ['LTI', riskPrediction.features.lti_ratio?.toFixed(2)],
+                      ['Макс. просрочка', `${riskPrediction.features.max_overdue_days || 0} дн.`],
+                      ['Просрочек за 12м', riskPrediction.features.overdue_count_12m || 0],
+                      ['Доля просрочек', `${((riskPrediction.features.overdue_share_12m || 0) * 100).toFixed(0)}%`],
+                      ['Обещаний', riskPrediction.features.promises_count || 0],
+                    ].map(([k, v]) => (
+                      <tr key={k}><td style={{color:'#737373', padding:'3px 0'}}>{k}</td><td style={{color:'#1a1a1a', fontWeight:500, textAlign:'right'}}>{v}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {/* Recommendation */}
+            <div style={{padding:'24px 30px'}}>
+              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Рекомендация</div>
+              <div style={{fontSize:'0.85rem', color:'#1a1a1a', lineHeight:1.5}}>
+                {riskPrediction.risk_category === 0 && '✅ Стандартное сопровождение. Риск просрочки минимален.'}
+                {riskPrediction.risk_category === 1 && '⚠️ Повышенное внимание. Рекомендуется превентивный контакт и мониторинг платёжной дисциплины.'}
+                {riskPrediction.risk_category === 2 && '🔴 Высокий риск. Необходимо срочное воздействие: звонок, предложение реструктуризации.'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Events */}
+      <div style={{borderBottom:'1px solid #e5e5e5'}}>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+            События кредита ({creditEvents.length})
+          </h2>
+        </div>
+        {creditEvents.length > 0 ? (
+          <div style={{padding:'20px 40px'}}>
+            <div style={{position:'relative'}}>
+              {/* Timeline line */}
+              <div style={{position:'absolute', left:15, top:8, bottom:8, width:2, background:'#e5e5e5'}} />
+              {creditEvents.slice(0, 30).map((ev, idx) => (
+                <div key={idx} style={{display:'flex', gap:16, marginBottom:idx < creditEvents.length - 1 ? 12 : 0, position:'relative'}}>
+                  {/* Icon dot */}
+                  <div style={{
+                    width:32, minWidth:32, height:32, borderRadius:'50%',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:'0.85rem', background: ev.bgColor, border: `2px solid ${ev.color}`,
+                    position:'relative', zIndex:1,
+                  }}>
+                    {ev.icon}
+                  </div>
+                  {/* Content */}
+                  <div style={{flex:1, paddingTop:2}}>
+                    <div style={{display:'flex', alignItems:'baseline', gap:10}}>
+                      <span style={{fontSize:'0.8rem', color:'#737373', minWidth:85}}>{formatDate(ev.date)}</span>
+                      <span style={{
+                        fontSize:'0.7rem', fontWeight:600, textTransform:'uppercase',
+                        padding:'1px 8px', borderRadius:3,
+                        background: ev.bgColor, color: ev.color,
+                        letterSpacing:'0.3px',
+                      }}>
+                        {ev.label}
+                      </span>
+                    </div>
+                    <div style={{fontSize:'0.82rem', color:'#525252', marginTop:2}}>{ev.description}</div>
+                  </div>
+                </div>
+              ))}
+              {creditEvents.length > 30 && (
+                <div style={{textAlign:'center', color:'#737373', fontSize:'0.8rem', paddingTop:8}}>
+                  … и ещё {creditEvents.length - 30} событий
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет событий</div>
+        )}
+      </div>
+
       {/* Interactions */}
       <div style={{borderBottom:'1px solid #e5e5e5'}}>
         <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
@@ -240,17 +515,23 @@ export default function CreditDetailPage({ creditId, onBack }) {
             <thead>
               <tr style={{background:'#fafafa'}}>
                 <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
+                <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Оператор</th>
                 <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Тип</th>
                 <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Результат</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Сумма обещания</th>
                 <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Комментарий</th>
               </tr>
             </thead>
             <tbody>
-              {interactions.slice(0, 10).map((item, idx) => (
+              {interactions.slice(0, 20).map((item, idx) => (
                 <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
                   <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.datetime)}</td>
+                  <td style={{padding:'10px 20px', color:'#525252', fontSize:'0.82rem'}}>{item.operator_name || '—'}</td>
                   <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.intervention_type === 'phone' ? 'Звонок' : item.intervention_type === 'sms' ? 'СМС' : item.intervention_type === 'email' ? 'Email' : item.intervention_type === 'letter' ? 'Письмо' : item.intervention_type === 'visit' ? 'Визит' : item.intervention_type}</td>
                   <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.status === 'completed' ? 'Завершено' : item.status === 'no_answer' ? 'Не дозвон' : item.status === 'promise' ? 'Обещание' : item.status === 'refuse' ? 'Отказ' : item.status === 'callback' ? 'Перезвонить' : item.status}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.promise_amount) > 0 ? '#16a34a' : '#a3a3a3', fontWeight: parseFloat(item.promise_amount) > 0 ? 500 : 400}}>
+                    {parseFloat(item.promise_amount) > 0 ? formatCurrency(item.promise_amount) : '—'}
+                  </td>
                   <td style={{padding:'10px 40px', color:'#737373'}}>{item.notes || '—'}</td>
                 </tr>
               ))}
@@ -292,44 +573,131 @@ export default function CreditDetailPage({ creditId, onBack }) {
         )}
       </div>
 
-      {/* Credit States */}
+      {/* Credit States - Tabs */}
       <div>
-        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>История состояний ({creditStates.length})</h2>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa', display:'flex', alignItems:'center', gap:16}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+            История состояний
+          </h2>
+          <div style={{display:'flex', gap:4, marginLeft:12}}>
+            <button
+              onClick={() => setStatesTab('monthly')}
+              style={{
+                padding:'4px 14px', fontSize:'0.78rem', borderRadius:4, cursor:'pointer',
+                border: statesTab === 'monthly' ? '1px solid #2563eb' : '1px solid #d4d4d4',
+                background: statesTab === 'monthly' ? '#eff6ff' : '#fff',
+                color: statesTab === 'monthly' ? '#2563eb' : '#525252',
+                fontWeight: statesTab === 'monthly' ? 600 : 400,
+              }}
+            >
+              📅 На плановый день платежа ({creditStates.length})
+            </button>
+            <button
+              onClick={() => { setStatesTab('daily'); fetchDailyStates(); setDailyPage(1); }}
+              style={{
+                padding:'4px 14px', fontSize:'0.78rem', borderRadius:4, cursor:'pointer',
+                border: statesTab === 'daily' ? '1px solid #2563eb' : '1px solid #d4d4d4',
+                background: statesTab === 'daily' ? '#eff6ff' : '#fff',
+                color: statesTab === 'daily' ? '#2563eb' : '#525252',
+                fontWeight: statesTab === 'daily' ? 600 : 400,
+              }}
+            >
+              📆 За каждый день {dailyStates.length > 0 ? `(${dailyStates.length})` : ''}
+            </button>
+          </div>
         </div>
-        {creditStates.length > 0 ? (
-          <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
-            <thead>
-              <tr style={{background:'#fafafa'}}>
-                <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
-                <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
-              </tr>
-            </thead>
-            <tbody>
-              {creditStates.slice(0, 20).map((item, idx) => (
-                <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
-                    {formatCurrency(item.overdue_principal)}
-                  </td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
-                    {formatCurrency(item.overdue_interest)}
-                  </td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
-                  <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
-                    {item.overdue_days ?? 0}
-                  </td>
+
+        {/* Monthly states tab */}
+        {statesTab === 'monthly' && (
+          creditStates.length > 0 ? (
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
+              <thead>
+                <tr style={{background:'#fafafa'}}>
+                  <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
+                  <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет данных</div>
+              </thead>
+              <tbody>
+                {creditStates.map((item, idx) => (
+                  <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
+                    <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                      {formatCurrency(item.overdue_principal)}
+                    </td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                      {formatCurrency(item.overdue_interest)}
+                    </td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
+                    <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                      {item.overdue_days ?? 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет данных</div>
+          )
+        )}
+
+        {/* Daily states tab */}
+        {statesTab === 'daily' && (
+          dailyLoading ? (
+            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Загрузка ежедневных данных...</div>
+          ) : dailyStates.length > 0 ? (
+            <>
+              <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
+                <thead>
+                  <tr style={{background:'#fafafa'}}>
+                    <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
+                    <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyStates.slice(0, dailyPage * DAILY_PAGE_SIZE).map((item, idx) => (
+                    <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
+                      <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                        {formatCurrency(item.overdue_principal)}
+                      </td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                        {formatCurrency(item.overdue_interest)}
+                      </td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
+                      <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                        {item.overdue_days ?? 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {dailyPage * DAILY_PAGE_SIZE < dailyStates.length && (
+                <div style={{padding:'16px 40px', textAlign:'center', borderTop:'1px solid #e5e5e5'}}>
+                  <button
+                    onClick={() => setDailyPage(p => p + 1)}
+                    style={{
+                      padding:'8px 24px', fontSize:'0.8rem', borderRadius:4, cursor:'pointer',
+                      border:'1px solid #d4d4d4', background:'#fff', color:'#525252',
+                    }}
+                  >
+                    Показать ещё {Math.min(DAILY_PAGE_SIZE, dailyStates.length - dailyPage * DAILY_PAGE_SIZE)} из {dailyStates.length - dailyPage * DAILY_PAGE_SIZE} записей
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет данных</div>
+          )
         )}
       </div>
 

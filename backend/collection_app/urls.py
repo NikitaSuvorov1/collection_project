@@ -52,4 +52,7 @@ urlpatterns = [
     
     # Audit Log
     path('audit/', views.AuditLogView.as_view(), name='audit-log'),
+    
+    # Daily credit states (interpolated)
+    path('credit-daily-states/', views.CreditDailyStatesView.as_view(), name='credit-daily-states'),
 ]

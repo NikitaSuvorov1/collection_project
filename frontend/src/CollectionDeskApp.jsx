@@ -162,6 +162,24 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
         }
       }
 
+      // Подгружаем ML-прогноз риска для каждого клиента
+      for (const d of debtors) {
+        try {
+          const riskResp = await fetch(`${API_URL}/overdue-prediction/?client_id=${d.clientId}`);
+          if (riskResp.ok) {
+            const riskData = await riskResp.json();
+            const results = riskData.results || [];
+            if (results.length > 0) {
+              // Берём максимальный risk_score среди всех кредитов клиента
+              const maxRisk = results.reduce((mx, r) => r.risk_score > mx.risk_score ? r : mx, results[0]);
+              d.mlRiskScore = maxRisk.risk_score;
+              d.mlRiskCategory = maxRisk.risk_category;
+              d.mlRiskLabel = maxRisk.risk_label;
+            }
+          }
+        } catch (e) { /* ML-прогноз не критичен */ }
+      }
+
       setQueue(debtors);
       if (debtors.length > 0 && !selectedId) setSelectedId(debtors[0].id);
     } catch (e) {
@@ -405,7 +423,12 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             {sidebarTab === 'pending' && pendingVisible.map(d => (
               <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
                 <div className="cli-left">
-                  <div className="cli-name">{d.name}</div>
+                  <div className="cli-name">
+                    {d.mlRiskCategory !== undefined && (
+                      <span style={{display:'inline-block', width:8, height:8, borderRadius:'50%', marginRight:6, background: d.mlRiskCategory === 2 ? '#ef4444' : d.mlRiskCategory === 1 ? '#eab308' : '#22c55e'}} />
+                    )}
+                    {d.name}
+                  </div>
                   <div className="cli-phone">{d.mainPhone}</div>
                 </div>
                 <div className="cli-right">
@@ -461,11 +484,13 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                 <div style={{textAlign:'right'}}>
                   <div>
                     <span style={{display:'inline-block',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600,
-                      background: selected.daysPastDue > 90 ? '#ef444420' : selected.daysPastDue > 30 ? '#f59e0b20' : '#22c55e20',
-                      color: selected.daysPastDue > 90 ? '#ef4444' : selected.daysPastDue > 30 ? '#f59e0b' : '#22c55e'
+                      background: (selected.mlRiskCategory ?? (selected.daysPastDue > 90 ? 2 : selected.daysPastDue > 30 ? 1 : 0)) === 2 ? '#ef444420' : (selected.mlRiskCategory ?? (selected.daysPastDue > 90 ? 2 : selected.daysPastDue > 30 ? 1 : 0)) === 1 ? '#f59e0b20' : '#22c55e20',
+                      color: (selected.mlRiskCategory ?? (selected.daysPastDue > 90 ? 2 : selected.daysPastDue > 30 ? 1 : 0)) === 2 ? '#ef4444' : (selected.mlRiskCategory ?? (selected.daysPastDue > 90 ? 2 : selected.daysPastDue > 30 ? 1 : 0)) === 1 ? '#f59e0b' : '#22c55e'
                     }}>
-                      {selected.daysPastDue > 90 ? 'ВЫСОКИЙ' : selected.daysPastDue > 30 ? 'СРЕДНИЙ' : 'НИЗКИЙ'} РИСК
+                      {selected.mlRiskLabel ? `${selected.mlRiskLabel.toUpperCase()} РИСК` : (selected.daysPastDue > 90 ? 'ВЫСОКИЙ' : selected.daysPastDue > 30 ? 'СРЕДНИЙ' : 'НИЗКИЙ') + ' РИСК'}
+                      {selected.mlRiskScore !== undefined && <span style={{marginLeft:4, opacity:0.7}}>({(selected.mlRiskScore * 100).toFixed(0)})</span>}
                     </span>
+                    {selected.mlRiskScore !== undefined && <div style={{fontSize:10, color:'#a3a3a3', marginTop:2}}>ML-прогноз</div>}
                   </div>
                   <button className="btn small ghost" style={{marginTop:8}} onClick={() => onClient360 && onClient360(selected.clientId)}>
                     👤 360° профиль

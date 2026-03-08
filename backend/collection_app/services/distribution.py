@@ -1,15 +1,81 @@
 """
 Distribution service for assigning clients to operators.
 Can be used from views, Celery tasks, or management commands.
+
+Интегрирован с ML-моделью прогнозирования просрочки:
+  - При распределении учитывается risk_score из OverdueRiskModel
+  - Если свежий ScoringResult отсутствует (>7 дней), прогноз делается на лету
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import List, Dict, Tuple
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, Max
 
 from collection_app.models import (
     Client, Operator, Credit, Assignment, ScoringResult, Intervention
 )
+
+
+def _build_credit_features(credit: Credit) -> dict:
+    """Build ML feature vector for predict_risk. Shared with score_all_credits command."""
+    client = credit.client
+    today = date.today()
+    year_ago = today - timedelta(days=365)
+
+    payments = credit.payments.all()
+    interventions = credit.interventions.all()
+
+    age = (today - client.birth_date).days / 365.25 if client.birth_date else 35
+    gender = 1 if client.gender == 'M' else 0
+    marital_map = {'single': 0, 'married': 1, 'divorced': 2, 'widowed': 3}
+    empl_map = {'employed': 1, 'self_employed': 2, 'unemployed': 0, 'retired': 3, 'student': 4}
+
+    monthly_income = float(client.income) if client.income else 0
+    other_count = Credit.objects.filter(client=client).exclude(id=credit.id).count()
+
+    credit_amount = float(credit.principal_amount) if credit.principal_amount else 0
+    td = (credit.planned_close_date - credit.open_date).days if credit.planned_close_date and credit.open_date else 365
+    credit_term = max(td // 30, 1)
+    interest_rate = float(credit.interest_rate) if credit.interest_rate else 0
+    monthly_pay = float(credit.monthly_payment) if credit.monthly_payment else 0
+    lti = (credit_amount / (monthly_income * 12)) if monthly_income > 0 else 0
+    credit_age = (today - credit.open_date).days if credit.open_date else 0
+    status_map = {'active': 1, 'closed': 0, 'overdue': 2, 'default': 3, 'restructured': 4, 'legal': 5, 'sold': 6, 'written_off': 7}
+
+    total_p = payments.count()
+    overdue_p = payments.filter(overdue_days__gt=0).count()
+    max_od = payments.aggregate(m=Max('overdue_days'))['m'] or 0
+    avg_pay = payments.aggregate(a=Avg('amount'))['a'] or 0
+    p12 = payments.filter(payment_date__gte=year_ago)
+    p12_cnt = p12.count()
+    od12_cnt = p12.filter(overdue_days__gt=0).count()
+    od12_share = od12_cnt / p12_cnt if p12_cnt > 0 else 0
+    max_od_12 = p12.aggregate(m=Max('overdue_days'))['m'] or 0
+
+    total_iv = interventions.count()
+    compl_iv = interventions.filter(status='completed').count()
+    promises = interventions.filter(status='promise').count()
+
+    return {
+        'age': age, 'gender': gender,
+        'marital_status': marital_map.get(client.marital_status, 0),
+        'employment': empl_map.get(client.employment, 1),
+        'dependents': client.children_count or 0,
+        'monthly_income': monthly_income,
+        'has_other_credits': 1 if other_count > 0 else 0,
+        'other_credits_count': other_count,
+        'credit_amount': credit_amount, 'credit_term': credit_term,
+        'interest_rate': interest_rate, 'lti_ratio': lti,
+        'credit_age': credit_age,
+        'credit_status': status_map.get(credit.status, 1),
+        'monthly_payment': monthly_pay,
+        'total_payments': total_p, 'overdue_payments': overdue_p,
+        'max_overdue_days': max_od, 'avg_payment': float(avg_pay),
+        'payments_count_12m': p12_cnt, 'overdue_count_12m': od12_cnt,
+        'overdue_share_12m': od12_share, 'max_overdue_12m': max_od_12,
+        'total_interventions': total_iv, 'completed_interventions': compl_iv,
+        'promises_count': promises,
+    }
 
 
 class DistributionService:
@@ -79,10 +145,11 @@ class DistributionService:
         Higher = more problematic = needs experienced operator.
         
         Factors:
-        - Overdue amount (0-30 pts)
-        - Days past due (0-30 pts)
-        - Risk segment (0-25 pts)
-        - Failed contact attempts (0-15 pts)
+        - Overdue amount (0-25 pts)
+        - Days past due (0-25 pts)
+        - ML risk score (0-30 pts)  ← новый фактор
+        - Failed contact attempts (0-10 pts)
+        - Risk segment from scoring (0-10 pts)
         """
         # Get overdue info from latest state
         latest_state = credit.states.order_by('-state_date').first()
@@ -96,31 +163,51 @@ class DistributionService:
             days_overdue = 0
 
         # Amount score (normalized to 500k max)
-        amount_score = min(30, (overdue_amount / 500000) * 30)
+        amount_score = min(25, (overdue_amount / 500000) * 25)
 
         # Days score
-        days_score = min(30, (days_overdue / 180) * 30)
+        days_score = min(25, (days_overdue / 180) * 25)
 
-        # Risk segment
+        # --- ML risk score (0-30 pts) ---
+        ml_risk_score = None
         latest_scoring = credit.scorings.order_by('-calculation_date').first()
-        segment_weights = {'low': 5, 'medium': 12, 'high': 20, 'critical': 25}
-        risk_score = segment_weights.get(
-            latest_scoring.risk_segment if latest_scoring else 'medium', 
-            12
-        )
+        cutoff_date = date.today() - timedelta(days=7)
 
-        # Failed attempts
+        if latest_scoring and latest_scoring.calculation_date >= cutoff_date:
+            # Use fresh scoring result — convert score_value (300-850) back to risk_score (0-1)
+            ml_risk_score = max(0.0, min(1.0, (850 - (latest_scoring.score_value or 575)) / 550))
+        else:
+            # No fresh scoring → compute on-the-fly
+            try:
+                from collection_app.ml.overdue_predictor import predict_risk
+                features = _build_credit_features(credit)
+                pred = predict_risk(features)
+                ml_risk_score = pred.get('risk_score', 0.5)
+            except Exception:
+                ml_risk_score = 0.5  # fallback
+
+        ml_risk_pts = ml_risk_score * 30  # 0-30 pts
+
+        # Failed attempts (0-10 pts)
         failed = Intervention.objects.filter(
             credit=credit,
             status__in=['no_answer', 'refuse']
         ).count()
-        failed_score = min(15, failed * 3)
+        failed_score = min(10, failed * 2)
+
+        # Segment bonus (0-10 pts) from static segment
+        segment_weights = {'low': 2, 'medium': 5, 'high': 8, 'critical': 10}
+        segment_label = latest_scoring.risk_segment if latest_scoring else 'medium'
+        segment_score = segment_weights.get(segment_label, 5)
+
+        total_priority = amount_score + days_score + ml_risk_pts + failed_score + segment_score
 
         return {
-            'total_priority': amount_score + days_score + risk_score + failed_score,
+            'total_priority': total_priority,
             'overdue_amount': overdue_amount,
             'days_overdue': days_overdue,
-            'risk_segment': latest_scoring.risk_segment if latest_scoring else 'medium',
+            'ml_risk_score': ml_risk_score,
+            'risk_segment': segment_label,
             'failed_attempts': failed,
         }
 

@@ -620,6 +620,7 @@ export default function Client360Page({ clientId, onBack }) {
   const [interventions, setInterventions] = useState([]);
   const [nbaList, setNbaList] = useState([]);
   const [forecast, setForecast] = useState(null);
+  const [riskPredictions, setRiskPredictions] = useState(null);
   
   useEffect(() => {
     loadClientData();
@@ -638,6 +639,17 @@ export default function Client360Page({ clientId, onBack }) {
       setInterventions(data.interventions || []);
       setNbaList(data.nba_recommendations || []);
       setForecast(data.latest_forecast);
+      
+      // Fetch ML risk predictions
+      try {
+        const riskResp = await fetch(`${API_BASE}/overdue-prediction/?client_id=${clientId}`);
+        if (riskResp.ok) {
+          const riskData = await riskResp.json();
+          setRiskPredictions(riskData.results || []);
+        }
+      } catch (e) {
+        console.warn('Risk prediction fetch failed:', e);
+      }
       
     } catch (err) {
       console.error('Failed to load client data:', err);
@@ -804,14 +816,28 @@ export default function Client360Page({ clientId, onBack }) {
                   const debt = Number(state?.principal_debt || 0);
                   const overdueDays = state?.overdue_days || state?.dpd || 0;
                   const productLabels = { consumer: 'Потребительский кредит', mortgage: 'Ипотека', car: 'Автокредит', credit_card: 'Кредитная карта', microloan: 'Микрозайм' };
+                  const mlRisk = riskPredictions?.find(r => r.credit_id === credit.id);
+                  const riskColorMap = { 0: '#22c55e', 1: '#f59e0b', 2: '#ef4444' };
+                  const riskLabelMap = { 0: 'Низкий', 1: 'Средний', 2: 'Высокий' };
                   
                   return (
                     <div key={credit.id} className="credit-mini">
                       <div className="credit-mini-header">
                         <span>{productLabels[credit.product_type] || credit.product_type || 'Кредит'}</span>
-                        <span className={`risk-badge risk-${credit.risk_segment || 'medium'}`}>
-                          {credit.risk_segment || 'medium'}
-                        </span>
+                        {mlRisk ? (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                            background: `${riskColorMap[mlRisk.risk_category ?? 1]}18`,
+                            color: riskColorMap[mlRisk.risk_category ?? 1],
+                            border: `1px solid ${riskColorMap[mlRisk.risk_category ?? 1]}40`
+                          }}>
+                            {riskLabelMap[mlRisk.risk_category ?? 1]} · {Math.round((mlRisk.risk_score || 0) * 100)}
+                          </span>
+                        ) : (
+                          <span className={`risk-badge risk-${credit.risk_segment || 'medium'}`}>
+                            {credit.risk_segment || 'medium'}
+                          </span>
+                        )}
                       </div>
                       <div className="credit-mini-row">
                         <span>Долг: {formatCurrency(debt)}</span>
@@ -884,8 +910,105 @@ export default function Client360Page({ clientId, onBack }) {
               </div>
             </div>
             
-            {/* Right: Forecast & NBA */}
+            {/* Right: Risk, Forecast & NBA */}
             <div className="overview-right">
+              {/* ML Risk Predictions */}
+              {riskPredictions && riskPredictions.length > 0 && (() => {
+                const maxRisk = riskPredictions.reduce((a, b) => (b.risk_score || 0) > (a.risk_score || 0) ? b : a, riskPredictions[0]);
+                const avgScore = riskPredictions.reduce((s, r) => s + (r.risk_score || 0), 0) / riskPredictions.length;
+                const riskColorMap = { 0: '#22c55e', 1: '#f59e0b', 2: '#ef4444' };
+                const riskLabelMap = { 0: 'Низкий', 1: 'Средний', 2: 'Высокий' };
+                const overallCategory = avgScore > 0.66 ? 2 : avgScore > 0.33 ? 1 : 0;
+                const overallColor = riskColorMap[overallCategory];
+                const productLabels = { consumer: 'Потребительский', mortgage: 'Ипотека', car: 'Автокредит', credit_card: 'Кредитная карта', microloan: 'Микрозайм' };
+
+                return (
+                  <div className="metric-card" style={{ borderLeft: `4px solid ${overallColor}` }}>
+                    <h3>🤖 ML-прогноз просрочки</h3>
+                    
+                    {/* Overall risk gauge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '12px 0' }}>
+                      <div style={{
+                        width: 64, height: 64, borderRadius: '50%',
+                        border: `4px solid ${overallColor}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        background: `${overallColor}15`
+                      }}>
+                        <span style={{ fontSize: 18, fontWeight: 700, color: overallColor }}>{Math.round(avgScore * 100)}</span>
+                        <span style={{ fontSize: 9, color: '#888' }}>из 100</span>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: overallColor }}>
+                          {riskLabelMap[overallCategory]} риск
+                        </div>
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                          {riskPredictions.length} кредит{riskPredictions.length === 1 ? '' : riskPredictions.length < 5 ? 'а' : 'ов'} проанализировано
+                        </div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>ML-модель · RandomForest</div>
+                      </div>
+                    </div>
+
+                    {/* Per-credit risks */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                      {riskPredictions.map((r, i) => {
+                        const cat = r.risk_category ?? 1;
+                        const clr = riskColorMap[cat];
+                        const score = Math.round((r.risk_score || 0) * 100);
+                        const cred = credits.find(c => c.id === r.credit_id);
+                        const label = cred ? (productLabels[cred.product_type] || cred.product_type) : `Кредит #${r.credit_id}`;
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? '1px solid #f0f0f0' : 'none' }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              background: `${clr}20`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontWeight: 700, fontSize: 13, color: clr, flexShrink: 0
+                            }}>{score}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
+                              <div style={{ fontSize: 11, color: '#888' }}>{r.risk_label || riskLabelMap[cat]}</div>
+                            </div>
+                            {/* Probability bars */}
+                            {r.probabilities && (
+                              <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 24 }}>
+                                {['low', 'medium', 'high'].map((k, j) => {
+                                  const pct = Math.round((r.probabilities[k] || 0) * 100);
+                                  return (
+                                    <div key={k} title={`${k}: ${pct}%`} style={{
+                                      width: 8, background: riskColorMap[j],
+                                      height: `${Math.max(pct, 4)}%`, borderRadius: 2, opacity: cat === j ? 1 : 0.3
+                                    }} />
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Key risk features from highest-risk credit */}
+                    {maxRisk.features && (
+                      <div style={{ marginTop: 10, padding: '8px 10px', background: '#f8fafc', borderRadius: 6, fontSize: 12 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4, color: '#555' }}>Ключевые факторы (макс. риск):</div>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 12px', color:'#666' }}>
+                          {maxRisk.features.overdue_days != null && <div>Дней просрочки: <b>{maxRisk.features.overdue_days}</b></div>}
+                          {maxRisk.features.debt_to_income != null && <div>Долг/доход: <b>{(maxRisk.features.debt_to_income * 100).toFixed(0)}%</b></div>}
+                          {maxRisk.features.payment_ratio != null && <div>Доля платежа: <b>{(maxRisk.features.payment_ratio * 100).toFixed(0)}%</b></div>}
+                          {maxRisk.features.total_debt != null && <div>Общий долг: <b>{Number(maxRisk.features.total_debt).toLocaleString('ru')} ₽</b></div>}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recommendation */}
+                    {maxRisk.recommendation && (
+                      <div style={{ marginTop: 8, padding: '6px 10px', background: `${overallColor}10`, borderRadius: 6, fontSize: 12, color: '#555' }}>
+                        💡 {maxRisk.recommendation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Forecast Mini */}
               {forecast && (
                 <div className="forecast-mini">

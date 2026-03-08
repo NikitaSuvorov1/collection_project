@@ -5,7 +5,8 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date as date_type
+from decimal import Decimal
 
 from .models import (
     Client, Credit, Payment, Intervention, Operator, ScoringResult, 
@@ -213,6 +214,70 @@ class CreditStateViewSet(viewsets.ReadOnlyModelViewSet):
         if client_id:
             qs = qs.filter(client_id=client_id)
         return qs.order_by('-state_date')
+
+
+class CreditDailyStatesView(APIView):
+    """Возвращает ежедневные состояния кредита, интерполированные из помесячных."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        credit_id = request.query_params.get('credit')
+        if not credit_id:
+            return Response({'error': 'credit parameter required'}, status=400)
+
+        try:
+            credit = Credit.objects.get(id=credit_id)
+        except Credit.DoesNotExist:
+            return Response({'error': 'credit not found'}, status=404)
+
+        monthly_states = list(
+            CreditState.objects.filter(credit=credit)
+            .order_by('state_date')
+            .values('state_date', 'principal_debt', 'overdue_principal',
+                    'interest', 'overdue_interest', 'penalties', 'overdue_days')
+        )
+
+        if not monthly_states:
+            return Response([])
+
+        fields = ['principal_debt', 'overdue_principal', 'interest',
+                  'overdue_interest', 'penalties']
+
+        daily = []
+        for i in range(len(monthly_states) - 1):
+            s1 = monthly_states[i]
+            s2 = monthly_states[i + 1]
+            d1 = s1['state_date']
+            d2 = s2['state_date']
+            total_days = (d2 - d1).days
+            if total_days <= 0:
+                continue
+
+            cur = d1
+            while cur < d2:
+                frac = (cur - d1).days / total_days
+                row = {'state_date': cur.isoformat()}
+                for f in fields:
+                    v1 = float(s1[f] or 0)
+                    v2 = float(s2[f] or 0)
+                    row[f] = str(round(v1 + (v2 - v1) * frac, 2))
+                dpd1 = s1['overdue_days'] or 0
+                dpd2 = s2['overdue_days'] or 0
+                row['overdue_days'] = round(dpd1 + (dpd2 - dpd1) * frac)
+                daily.append(row)
+                cur += timedelta(days=1)
+
+        # Добавляем последнюю точку
+        last = monthly_states[-1]
+        row = {'state_date': last['state_date'].isoformat()}
+        for f in fields:
+            row[f] = str(float(last[f] or 0))
+        row['overdue_days'] = last['overdue_days'] or 0
+        daily.append(row)
+
+        # Отдаём в обратном хронологическом порядке
+        daily.reverse()
+        return Response(daily)
 
 
 class ScoringResultViewSet(viewsets.ReadOnlyModelViewSet):

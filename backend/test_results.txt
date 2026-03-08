@@ -1,0 +1,189 @@
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 1: 230-ФЗ — can_contact()
+─────────────────────────────────────────────────────────────────
+
+  ▸ Ст.7: Банкротство
+  ✅ TC-01: Банкрот → контакт запрещён
+  ✅ TC-02: Банкрот → причина содержит "банкрот"
+  ✅ TC-03: Не банкрот → bankruptcy=False
+
+  ▸ Ст.3: Отказ от взаимодействия
+  ✅ TC-04: Полный отказ → контакт запрещён
+  ✅ TC-05: Полный отказ → звонки запрещены
+  ✅ TC-06: Полный отказ → SMS тоже запрещены
+  ✅ TC-07: Отказ от SMS → звонок разрешён
+  ✅ TC-08: Отказ от SMS → SMS запрещён
+  ✅ TC-09: Отказ phone+sms → email разрешён
+  ✅ TC-10: Отказ phone+sms → phone запрещён
+
+  ▸ Ст.4: Третьи лица
+  ✅ TC-11: Третье лицо без согласия → запрещён
+  ✅ TC-12: Третье лицо без согласия → violation содержит Ст.4
+  ✅ TC-13: Третье лицо с согласием → разрешён
+  ✅ TC-14: Контакт с клиентом (не третье лицо) → third_party_ok=True
+
+  ▸ Ст.1: Ограничения по времени
+  ✅ TC-15: Текущее время 16:00 → time_ok=True
+  ✅ TC-16: Будни разрешены 08–22
+  ✅ TC-17: Выходные разрешены 09–20
+
+  ▸ Ст.2: Лимиты частоты контактов
+  ✅ TC-18: Лимит звонков: 1/день, 2/нед, 8/мес
+  ✅ TC-19: Лимит SMS: 2/день, 4/нед, 16/мес
+  ✅ TC-20: 0 звонков за день → frequency_ok=True
+  ✅ TC-21: 1 звонок за день (лимит 1) → frequency_ok=False
+  ✅ TC-22: Violations содержат "Превышен лимит за день"
+  ✅ TC-23: 1 SMS за день (лимит 2) → frequency_ok=True
+  ✅ TC-24: 2 SMS за день (лимит 2) → frequency_ok=False
+  ✅ TC-25: 2 звонка за неделю (лимит 2) → frequency_ok=False
+
+  ▸ Ст.9: Интервал 4 часа
+  ✅ TC-26: MIN_CALL_INTERVAL_HOURS == 4
+  ✅ TC-27: Последний звонок 2ч назад → interval_ok=False
+  ✅ TC-28: Последний звонок 5ч назад → interval_ok=True
+  ✅ TC-29: Нет звонков → interval_ok=True
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 2: 230-ФЗ — validate_intervention()
+─────────────────────────────────────────────────────────────────
+
+  ▸ Ст.6: Идентификация оператора
+  ✅ TC-30: Нет operator/operator_id → violation Ст.6
+  ✅ TC-31: Есть operator_id → нет violation про "не указан"
+  ✅ TC-32: operator_identified=False → violation "не представился"
+  ✅ TC-33: operator_identified=True → нет violation
+
+  ▸ Ст.8: Запрет скрытого номера
+  ✅ TC-34: Пустой caller_number → warning Ст.8
+  ✅ TC-35: Есть caller_number → нет warning Ст.8
+
+  ▸ Ст.5: Утверждённый скрипт
+  ✅ TC-36: approved_script_used=False → warning Ст.5
+  ✅ TC-37: approved_script_used=True → нет warning Ст.5
+
+  ▸ Ст.4: Третьи лица (пост-валидация)
+  ✅ TC-38: is_third_party + нет согласия → violation Ст.4
+  ✅ TC-39: is_third_party + есть согласие → нет violation Ст.4
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 3: Банкротство (ст.7)
+─────────────────────────────────────────────────────────────────
+  ✅ TC-40: check_bankruptcy → is_bankrupt=True
+  ✅ TC-41: check_bankruptcy → создана запись BankruptcyCheck
+  ✅ TC-42: check_bankruptcy → AuditLog запись
+  ✅ TC-43: Не банкрот → is_bankrupt=False
+  ✅ TC-44: Банкрот исключён из assignments queryset
+  ✅ TC-45: Не банкрот → assignment видно в списке
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 4: Отказники исключены из очереди
+─────────────────────────────────────────────────────────────────
+  ✅ TC-46: Отказник исключён из assignments
+  ✅ TC-47: Не отказник → assignment видно
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 5: Smart Distribution
+─────────────────────────────────────────────────────────────────
+
+  ▸ Расчёт опыта оператора
+  ✅ TC-48: calculate_operator_experience → total_score > 0
+  ✅ TC-49: Есть tenure_score, role_score, success_score
+
+  ▸ Расчёт приоритета клиента
+  ✅ TC-50: calculate_client_priority → total_priority >= 0
+  ✅ TC-51: Есть overdue_amount, days_overdue, risk_segment
+
+  ▸ Smart Routing
+  ✅ TC-52: get_recommended_operator → возвращает оператора
+  ✅ TC-53: match_info содержит match_quality
+
+  ▸ Лимит нагрузки оператора
+  ✅ TC-54: Перегруженный оператор (load=60/60) → None
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 6: ML Scoring Pipeline
+─────────────────────────────────────────────────────────────────
+  ✅ TC-55: Есть записи в ScoringResult
+  ✅ TC-56: ScoringResult.score_value заполнен
+  ✅ TC-57: ScoringResult.risk_segment заполнен
+  ✅ TC-58: Есть записи в MLModelVersion
+  ✅ TC-59: MLModelVersion.model_type заполнен
+  ✅ TC-60: MLModelVersion.roc_auc > 0
+  ❌ TC-61: MLModelVersion.hyperparameters заполнен — hyperparameters={}
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 7: Аудит (Ст.10 + Ст.11)
+─────────────────────────────────────────────────────────────────
+  ✅ TC-62: log_compliance_violation → создаёт AuditLog
+  ✅ TC-63: AuditLog.action = contact_blocked
+  ✅ TC-64: AuditLog.severity = warning
+  ✅ TC-65: AuditLog.details содержит violations
+  ✅ TC-66: Ст.10: История воздействий сохраняется
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 8: API Endpoints
+─────────────────────────────────────────────────────────────────
+  ✅ TC-67: get_compliance_summary() → compliance_rate число
+  ✅ TC-68: compliance_summary → rules_covered = 11
+  ✅ TC-69: compliance_summary → blocked_contacts >= 0
+  ✅ TC-70: compliance_summary → bankrupt_clients >= 0
+  ✅ TC-71: can_contact → ключ "allowed" в ответе
+  ✅ TC-72: can_contact → ключ "checks" в ответе
+  ✅ TC-73: can_contact → ключ "limits" в ответе
+  ✅ TC-74: can_contact → ключ "counts" в ответе
+  ✅ TC-75: can_contact → ключ "violations" в ответе
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 9: Комплексные сценарии
+─────────────────────────────────────────────────────────────────
+
+  ▸ Сценарий: банкрот + отказ
+  ✅ TC-76: Банкрот+отказ → блокировка по банкротству (приоритет)
+
+  ▸ Сценарий: чистый клиент
+  ✅ TC-77: Чистый клиент → allowed=True
+
+  ▸ Сценарий: несуществующий клиент
+  ✅ TC-78: Несуществующий client_id → allowed=False
+  ✅ TC-79: Несуществующий client_id → reason содержит "не найден"
+
+  ▸ Сценарий: полный цикл интервенции
+  ✅ TC-80: Цикл: шаг 1 — проверка разрешения
+  ✅ TC-81: Цикл: шаг 2 — валидация данных ok
+  ✅ TC-82: Цикл: шаг 3 — интервенция создана
+  ✅ TC-83: Цикл: шаг 4 — повторный звонок blocked (лимит 1/день)
+  ✅ TC-84: Цикл: шаг 5 — SMS после звонка всё ещё разрешён
+
+─────────────────────────────────────────────────────────────────
+  БЛОК 10: Модели — поля 230-ФЗ
+─────────────────────────────────────────────────────────────────
+
+  ▸ Поля Client
+  ✅ TC-85: Client.contact_refused существует
+  ✅ TC-86: Client.contact_refused_date существует
+  ✅ TC-87: Client.refused_channels существует (JSONField)
+  ✅ TC-88: Client.is_bankrupt существует
+  ✅ TC-89: Client.bankruptcy_date существует
+  ✅ TC-90: Client.third_party_consent существует
+  ✅ TC-91: Client.third_party_consent_date существует
+
+  ▸ Поля Intervention
+  ✅ TC-92: Intervention.caller_number существует
+  ✅ TC-93: Intervention.operator_identified существует
+  ✅ TC-94: Intervention.approved_script_used существует
+  ✅ TC-95: Intervention.is_third_party существует
+
+  ▸ Поля Assignment (A/B тестирование)
+  ✅ TC-96: Assignment.ab_group существует
+  ✅ TC-97: Assignment.assignment_method существует
+  ✅ TC-98: Assignment.match_score существует
+
+  ▸ Модель BankruptcyCheck
+  ✅ TC-99: Модель BankruptcyCheck существует
+  ✅ TC-100: BankruptcyCheck записи в БД
+
+=================================================================
+  ИТОГО: 99 ✅  /  1 ❌  /  100 всего
+  ⚠️  Процент успеха: 99.0%
+=================================================================
