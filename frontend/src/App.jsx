@@ -265,8 +265,8 @@ function OperatorWorkspace({ operator, onLogout }) {
   };
   const statusColor = (s) => {
     if (s === 'promise' || s === 'completed') return '#16a34a';
-    if (s === 'refuse') return '#dc2626';
-    if (s === 'no_answer') return '#9ca3af';
+    if (s === 'refuse') return '#f85149';
+    if (s === 'no_answer') return '#484f58';
     return '#d97706';
   };
 
@@ -320,8 +320,8 @@ function OperatorWorkspace({ operator, onLogout }) {
                     )}
                   </div>
                   <div className="cli-right">
-                    <div className="cli-amount" style={{ color: '#dc2626' }}>{money(c.overdue_amount)}</div>
-                    <div className="cli-days" style={{ color: c.overdue_days > 30 ? '#dc2626' : '#d97706' }}>{c.overdue_days} дн.</div>
+                    <div className="cli-amount" style={{ color: '#f85149' }}>{money(c.overdue_amount)}</div>
+                    <div className="cli-days" style={{ color: c.overdue_days > 30 ? '#f85149' : '#d97706' }}>{c.overdue_days} дн.</div>
                   </div>
                 </div>
               ))}
@@ -340,10 +340,10 @@ function OperatorWorkspace({ operator, onLogout }) {
                   <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Кредит #{selected.credit_id} • Приоритет: {selected.priority}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, color: '#6b7280' }}>Сумма просрочки</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#dc2626' }}>{money(selected.overdue_amount)}</div>
+                  <div style={{ fontSize: 13, color: '#8b949e' }}>Сумма просрочки</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#f85149' }}>{money(selected.overdue_amount)}</div>
                   <div className="muted" style={{ fontSize: 13 }}>
-                    Просрочка: <b style={{ color: selected.overdue_days > 30 ? '#dc2626' : '#d97706' }}>{selected.overdue_days} дн.</b>
+                    Просрочка: <b style={{ color: selected.overdue_days > 30 ? '#f85149' : '#d97706' }}>{selected.overdue_days} дн.</b>
                   </div>
                 </div>
               </div>
@@ -351,12 +351,12 @@ function OperatorWorkspace({ operator, onLogout }) {
               {/* Promise info block */}
               {selected.last_promise_amount && (
                 <div style={{ 
-                  background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, 
+                  background: 'rgba(63,185,80,0.15)', border: '1px solid rgba(63,185,80,0.4)', borderRadius: 8, 
                   padding: '10px 14px', marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
-                }}>
+                }>
                   <div>
-                    <div style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>🤝 Последнее обещание оплаты</div>
-                    <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>
+                    <div style={{ fontSize: 13, color: '#3fb950', fontWeight: 600 }}>🤝 Последнее обещание оплаты</div>
+                    <div style={{ fontSize: 12, color: '#3fb950', marginTop: 2 }}>
                       {selected.last_promise_date ? `Срок: до ${selected.last_promise_date}` : ''}
                     </div>
                   </div>
@@ -393,7 +393,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                           </div>
                         )}
                         {h.refusal_reason && (
-                          <div style={{ fontSize: 13, color: '#dc2626', marginTop: 4 }}>
+                          <div style={{ fontSize: 13, color: '#f85149', marginTop: 4 }}>
                             Причина отказа: {h.refusal_reason}
                           </div>
                         )}
@@ -441,7 +441,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                   <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{selected?.client_name}</div>
                   <div className="muted" style={{ fontSize: 13 }}>{selected?.phone}</div>
                 </div>
-                <button className="btn large" style={{ width: '100%', background: '#dc2626' }} onClick={handleEndCall}>
+                <button className="btn large" style={{ width: '100%', background: '#f85149' }} onClick={handleEndCall}>
                   Завершить звонок
                 </button>
                 <button className="btn ghost" style={{ width: '100%', marginTop: 8 }} onClick={handleCancel}>
@@ -465,14 +465,14 @@ function OperatorWorkspace({ operator, onLogout }) {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
-                          border: callResult === opt.value ? '2px solid #0b5fff' : '1px solid #e5e7eb',
-                          background: callResult === opt.value ? '#f0f7ff' : '#fff',
+                          border: callResult === opt.value ? '2px solid #388bfd' : '1px solid #30363d',
+                          background: callResult === opt.value ? 'rgba(56,139,253,0.15)' : '#161b22',
                         }}
                       >
                         <input type="radio" name="result" value={opt.value}
                           checked={callResult === opt.value}
                           onChange={() => handleSelectResult(opt.value)}
-                          style={{ accentColor: '#0b5fff' }}
+                          style={{ accentColor: '#388bfd' }}
                         />
                         <span>{opt.icon} {opt.label}</span>
                       </label>
@@ -482,7 +482,7 @@ function OperatorWorkspace({ operator, onLogout }) {
 
                 {/* Promise fields */}
                 {callResult === 'promise' && (
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                  <div style={{ background: 'rgba(63,185,80,0.15)', border: '1px solid rgba(63,185,80,0.4)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 13 }}>Сумма обещания (₽) *</label>
                     <input type="number" className="search" style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
                       value={promiseAmount} onChange={e => setPromiseAmount(e.target.value)}
@@ -497,7 +497,7 @@ function OperatorWorkspace({ operator, onLogout }) {
 
                 {/* Refusal reason */}
                 {callResult === 'refuse' && (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                  <div style={{ background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13 }}>Причина отказа *</label>
                     {REFUSAL_REASONS.map(r => (
                       <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 13, cursor: 'pointer' }}>
@@ -521,7 +521,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                 </div>
 
                 {validationError && (
-                  <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>
+                  <div style={{ color: '#f85149', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>
                     ⚠ {validationError}
                   </div>
                 )}

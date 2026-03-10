@@ -84,6 +84,14 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\nМодель сохранена.'))
 
+        # Save metrics to JSON for API access
+        import json
+        from pathlib import Path
+        meta_path = Path(__file__).resolve().parent.parent.parent / 'ml' / 'saved_models' / 'overdue_train_meta.json'
+        meta_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(meta_path, 'w') as f:
+            json.dump(metrics, f, ensure_ascii=False, default=str)
+
     # ================================================================
     # Вариант 1: из таблицы TrainingData (если --use-db-training-data)
     # ================================================================

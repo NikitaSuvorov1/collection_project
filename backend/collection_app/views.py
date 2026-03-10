@@ -643,6 +643,73 @@ class OverduePredictionView(APIView):
         }
 
 
+class TrainOverdueModelView(APIView):
+    """API для запуска обучения модели прогнозирования просрочки."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from django.core.management import call_command
+        from io import StringIO
+        import json
+
+        buf = StringIO()
+        try:
+            call_command('train_overdue_model', stdout=buf, stderr=buf)
+        except Exception as e:
+            return Response({'error': str(e), 'log': buf.getvalue()}, status=500)
+
+        # Load saved metrics from the model
+        from .ml.overdue_predictor import get_model, MODEL_PATH
+        model = get_model()
+        if model.is_fitted:
+            # Do a quick self-check to return metrics
+            result = {'status': 'ok', 'log': buf.getvalue()}
+            # Parse metrics from buffer output
+            log_text = buf.getvalue()
+            result['log'] = log_text
+            # Try to provide structured metrics by re-running predict on test
+            try:
+                import pickle
+                from pathlib import Path
+                model_dir = Path(__file__).parent / 'ml' / 'saved_models'
+                meta_path = model_dir / 'overdue_train_meta.json'
+                if meta_path.exists():
+                    with open(meta_path) as f:
+                        result.update(json.load(f))
+            except Exception:
+                pass
+            return Response(result)
+        else:
+            return Response({'error': 'Модель не была обучена', 'log': buf.getvalue()}, status=500)
+
+
+class TrainApprovalModelView(APIView):
+    """API для запуска обучения модели одобрения кредитных заявок."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from django.core.management import call_command
+        from io import StringIO
+        import json
+
+        buf = StringIO()
+        try:
+            call_command('train_approval_model', stdout=buf, stderr=buf)
+        except Exception as e:
+            return Response({'error': str(e), 'log': buf.getvalue()}, status=500)
+
+        result = {'status': 'ok', 'log': buf.getvalue()}
+        try:
+            from pathlib import Path
+            meta_path = Path(__file__).parent / 'ml' / 'saved_models' / 'approval_train_meta.json'
+            if meta_path.exists():
+                with open(meta_path) as f:
+                    result.update(json.load(f))
+        except Exception:
+            pass
+        return Response(result)
+
+
 # ===== KILLER FEATURES VIEWSETS =====
 
 class ClientBehaviorProfileViewSet(viewsets.ModelViewSet):

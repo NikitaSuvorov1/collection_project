@@ -255,4 +255,12 @@ class Command(BaseCommand):
             for name, imp in top:
                 self.stdout.write(f'    {name:30s} {imp:.4f}')
 
+        # Сохраняем метрики в JSON для API
+        import json as _json
+        from pathlib import Path as _Path
+        meta_dir = _Path(__file__).resolve().parent.parent.parent / 'ml' / 'saved_models'
+        meta_dir.mkdir(parents=True, exist_ok=True)
+        with open(meta_dir / 'approval_train_meta.json', 'w') as _f:
+            _json.dump(metrics, _f, default=str)
+
         self.stdout.write(self.style.SUCCESS('\nМодель сохранена.'))

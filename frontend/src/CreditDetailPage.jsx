@@ -135,19 +135,19 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
 
   if (loading) {
     return (
-      <div style={{background:'#fff', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>
-        <div style={{color:'#737373'}}>Загрузка...</div>
+      <div style={{background:'#0d1117', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>
+        <div style={{color:'#8b949e'}}>Загрузка...</div>
       </div>
     );
   }
 
   if (error || !credit) {
     return (
-      <div style={{background:'#fff', minHeight:'100vh', padding:'40px'}}>
-        <button onClick={onBack} style={{background:'none', border:'none', color:'#525252', cursor:'pointer', padding:0, marginBottom:16, fontSize:'0.875rem'}}>
+      <div style={{background:'#0d1117', minHeight:'100vh', padding:'40px'}}>
+        <button onClick={onBack} style={{background:'none', border:'none', color:'#8b949e', cursor:'pointer', padding:0, marginBottom:16, fontSize:'0.875rem'}}>
           ← Назад
         </button>
-        <div style={{background:'#fef2f2', color:'#991b1b', padding:'16px 20px', borderLeft:'3px solid #b91c1c'}}>
+        <div style={{background:'rgba(248,81,73,0.15)', color:'#f85149', padding:'16px 20px', borderLeft:'3px solid #f85149'}}>
           {error || 'Кредит не найден'}
         </div>
       </div>
@@ -174,8 +174,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         icon: '💰',
         label: PAYMENT_TYPE_LABELS[p.payment_type] || 'Платёж',
         description: `${formatCurrency(p.amount)}${isLate ? ` (просрочка ${p.overdue_days} дн.)` : ''}`,
-        color: isLate ? '#d97706' : '#16a34a',
-        bgColor: isLate ? '#fffbeb' : '#f0fdf4',
+          color: isLate ? '#d29922' : '#3fb950',
+          bgColor: isLate ? 'rgba(210,153,34,0.15)' : 'rgba(63,185,80,0.15)',
       });
     });
 
@@ -195,8 +195,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           icon: '🔴',
           label: 'Начало просрочки',
           description: `Просроч. ОД: ${formatCurrency(s.overdue_principal)}, DPD: ${dpd}`,
-          color: '#b91c1c',
-          bgColor: '#fef2f2',
+          color: '#f85149',
+          bgColor: 'rgba(248,81,73,0.15)',
         });
       }
       if (!isOd && wasOverdue) {
@@ -207,8 +207,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           icon: '🟢',
           label: 'Просрочка погашена',
           description: 'Просроченная задолженность закрыта',
-          color: '#16a34a',
-          bgColor: '#f0fdf4',
+          color: '#3fb950',
+          bgColor: 'rgba(63,185,80,0.15)',
         });
       }
       // Penalty events
@@ -220,8 +220,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           icon: '⚠️',
           label: 'Начисление штрафа',
           description: `Штраф: ${formatCurrency(s.penalties)}`,
-          color: '#d97706',
-          bgColor: '#fffbeb',
+          color: '#d29922',
+          bgColor: 'rgba(210,153,34,0.15)',
         });
       }
       wasOverdue = isOd;
@@ -236,8 +236,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         icon: '📋',
         label: 'Выдача кредита',
         description: `${PRODUCT_TYPES[credit.product_type] || credit.product_type}, ${formatCurrency(credit.principal_amount)}`,
-        color: '#2563eb',
-        bgColor: '#eff6ff',
+        color: '#388bfd',
+        bgColor: 'rgba(56,139,253,0.15)',
       });
     }
 
@@ -251,8 +251,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         icon: '✅',
         label: 'Кредит закрыт',
         description: 'Задолженность полностью погашена',
-        color: '#16a34a',
-        bgColor: '#f0fdf4',
+        color: '#3fb950',
+        bgColor: 'rgba(63,185,80,0.15)',
       });
     }
 
@@ -261,19 +261,19 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
   })();
 
   return (
-    <div style={{background:'#fff', minHeight:'100vh'}}>
+    <div style={{background:'#0d1117', minHeight:'100vh'}}>
       
       {/* Header */}
-      <div style={{borderBottom:'1px solid #e5e5e5', padding:'20px 40px'}}>
+      <div style={{borderBottom:'1px solid #30363d', padding:'20px 40px'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
           <div>
-            <button onClick={onBack} style={{background:'none', border:'none', color:'#525252', cursor:'pointer', padding:0, marginBottom:12, fontSize:'0.875rem'}}>
+            <button onClick={onBack} style={{background:'none', border:'none', color:'#8b949e', cursor:'pointer', padding:0, marginBottom:12, fontSize:'0.875rem'}}>
               ← Вернуться к реестру
             </button>
-            <h1 style={{margin:0, fontSize:'1.25rem', fontWeight:600, color:'#1a1a1a'}}>
+            <h1 style={{margin:0, fontSize:'1.25rem', fontWeight:600, color:'#e6edf3'}}>
               Договор № {credit.id}
             </h1>
-            <div style={{color:'#737373', fontSize:'0.875rem', marginTop:4}}>
+            <div style={{color:'#8b949e', fontSize:'0.875rem', marginTop:4}}>
               {PRODUCT_TYPES[credit.product_type] || credit.product_type}
             </div>
           </div>
@@ -281,14 +281,14 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
             {client && onClient360 && (
               <button
                 onClick={() => onClient360(client.id)}
-                style={{background:'#f5f5f5', border:'1px solid #e5e5e5', borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:'0.8rem', color:'#525252', fontWeight:500, display:'flex', alignItems:'center', gap:6}}
-                onMouseOver={e => { e.currentTarget.style.background='#e5e5e5'; }}
-                onMouseOut={e => { e.currentTarget.style.background='#f5f5f5'; }}
+                style={{background:'#21262d', border:'1px solid #30363d', borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:'0.8rem', color:'#8b949e', fontWeight:500, display:'flex', alignItems:'center', gap:6}}
+                onMouseOver={e => { e.currentTarget.style.background='#30363d'; }}
+                onMouseOut={e => { e.currentTarget.style.background='#21262d'; }}
               >
                 👤 Клиент 360°
               </button>
             )}
-            <div style={{color: isOverdue ? '#b91c1c' : '#525252', fontWeight:500, fontSize:'0.875rem'}}>
+            <div style={{color: isOverdue ? '#f85149' : '#8b949e', fontWeight:500, fontSize:'0.875rem'}}>
               {STATUS_LABELS[credit.status] || credit.status}
             </div>
           </div>
@@ -296,45 +296,45 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
       </div>
 
       {/* Info Sections */}
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', borderBottom:'1px solid #e5e5e5'}}>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', borderBottom:'1px solid #30363d'}}>
         
         {/* Client */}
-        <div style={{borderRight:'1px solid #e5e5e5'}}>
-          <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>Заёмщик</h2>
+        <div style={{borderRight:'1px solid #30363d'}}>
+          <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>Заёмщик</h2>
           </div>
           <div style={{padding:'20px 40px'}}>
             {client ? (
               <table style={{width:'100%', fontSize:'0.875rem'}}>
                 <tbody>
-                  <tr><td style={{color:'#737373', padding:'6px 0', width:'45%'}}>ФИО</td><td>{onClient360 ? <span onClick={() => onClient360(client.id)} style={{color:'#2563eb', cursor:'pointer', borderBottom:'1px dashed #2563eb'}}>{client.full_name || '—'}</span> : <span style={{color:'#1a1a1a'}}>{client.full_name || '—'}</span>}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Телефон</td><td style={{color:'#1a1a1a'}}>{client.phone_mobile || client.phone_work || '—'}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата рождения</td><td style={{color:'#1a1a1a'}}>{formatDate(client.birth_date)}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Город</td><td style={{color:'#1a1a1a'}}>{client.city || client.region || '—'}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Место работы</td><td style={{color:'#1a1a1a'}}>{client.employer_name || '—'}</td></tr>
-                  <tr><td style={{color:'#737373', padding:'6px 0'}}>Доход</td><td style={{color:'#1a1a1a'}}>{client.income ? formatCurrency(client.income) : '—'}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0', width:'45%'}}>ФИО</td><td>{onClient360 ? <span onClick={() => onClient360(client.id)} style={{color:'#58a6ff', cursor:'pointer', borderBottom:'1px dashed #58a6ff'}}>{client.full_name || '—'}</span> : <span style={{color:'#e6edf3'}}>{client.full_name || '—'}</span>}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Телефон</td><td style={{color:'#e6edf3'}}>{client.phone_mobile || client.phone_work || '—'}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Дата рождения</td><td style={{color:'#e6edf3'}}>{formatDate(client.birth_date)}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Город</td><td style={{color:'#e6edf3'}}>{client.city || client.region || '—'}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Место работы</td><td style={{color:'#e6edf3'}}>{client.employer_name || '—'}</td></tr>
+                  <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Доход</td><td style={{color:'#e6edf3'}}>{client.income ? formatCurrency(client.income) : '—'}</td></tr>
                 </tbody>
               </table>
             ) : (
-              <div style={{color:'#737373'}}>Данные отсутствуют</div>
+              <div style={{color:'#8b949e'}}>Данные отсутствуют</div>
             )}
           </div>
         </div>
 
         {/* Credit Parameters */}
         <div>
-          <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>Параметры кредита</h2>
+          <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>Параметры кредита</h2>
           </div>
           <div style={{padding:'20px 40px'}}>
             <table style={{width:'100%', fontSize:'0.875rem'}}>
               <tbody>
-                <tr><td style={{color:'#737373', padding:'6px 0', width:'50%'}}>Сумма</td><td style={{color:'#1a1a1a', fontWeight:500}}>{formatCurrency(credit.principal_amount)}</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Ставка</td><td style={{color:'#1a1a1a'}}>{Number(credit.interest_rate || 0).toFixed(2)}% годовых</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Срок</td><td style={{color:'#1a1a1a'}}>{credit.term_months ? `${credit.term_months} мес.` : '—'}</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Ежемесячный платёж</td><td style={{color:'#1a1a1a', fontWeight:500}}>{formatCurrency(credit.monthly_payment)}</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата выдачи</td><td style={{color:'#1a1a1a'}}>{formatDate(credit.open_date)}</td></tr>
-                <tr><td style={{color:'#737373', padding:'6px 0'}}>Дата окончания</td><td style={{color:'#1a1a1a'}}>{formatDate(credit.planned_close_date)}</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0', width:'50%'}}>Сумма</td><td style={{color:'#e6edf3', fontWeight:500}}>{formatCurrency(credit.principal_amount)}</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Ставка</td><td style={{color:'#e6edf3'}}>{Number(credit.interest_rate || 0).toFixed(2)}% годовых</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Срок</td><td style={{color:'#e6edf3'}}>{credit.term_months ? `${credit.term_months} мес.` : '—'}</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Ежемесячный платёж</td><td style={{color:'#e6edf3', fontWeight:500}}>{formatCurrency(credit.monthly_payment)}</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Дата выдачи</td><td style={{color:'#e6edf3'}}>{formatDate(credit.open_date)}</td></tr>
+                <tr><td style={{color:'#8b949e', padding:'6px 0'}}>Дата окончания</td><td style={{color:'#e6edf3'}}>{formatDate(credit.planned_close_date)}</td></tr>
               </tbody>
             </table>
           </div>
@@ -343,33 +343,33 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
 
       {/* Current State */}
       {latestState && (
-        <div style={{borderBottom:'1px solid #e5e5e5'}}>
-          <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+        <div style={{borderBottom:'1px solid #30363d'}}>
+          <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>
               Текущее состояние
               {latestState.state_date && <span style={{fontWeight:400, marginLeft:8}}>на {formatDate(latestState.state_date)}</span>}
             </h2>
           </div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(5, 1fr)'}}>
-            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Основной долг</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color:'#1a1a1a'}}>{formatCurrency(latestState.principal_debt)}</div>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Основной долг</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color:'#e6edf3'}}>{formatCurrency(latestState.principal_debt)}</div>
             </div>
-            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. основной</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.overdue_principal)}</div>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. основной</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_principal) > 0 ? '#f85149' : '#e6edf3'}}>{formatCurrency(latestState.overdue_principal)}</div>
             </div>
-            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. проценты</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.overdue_interest)}</div>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Просроч. проценты</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.overdue_interest) > 0 ? '#f85149' : '#e6edf3'}}>{formatCurrency(latestState.overdue_interest)}</div>
             </div>
-            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Штрафы / пени</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(latestState.penalties)}</div>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Штрафы / пени</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: parseFloat(latestState.penalties) > 0 ? '#f85149' : '#e6edf3'}}>{formatCurrency(latestState.penalties)}</div>
             </div>
             <div style={{padding:'24px 40px'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Дней просрочки</div>
-              <div style={{fontSize:'1.25rem', fontWeight:600, color: latestState.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>{latestState.overdue_days ?? 0}</div>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4}}>Дней просрочки</div>
+              <div style={{fontSize:'1.25rem', fontWeight:600, color: latestState.overdue_days > 0 ? '#f85149' : '#e6edf3'}}>{latestState.overdue_days ?? 0}</div>
             </div>
           </div>
         </div>
@@ -377,20 +377,20 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
 
       {/* Risk Prediction Widget */}
       {riskPrediction && (
-        <div style={{borderBottom:'1px solid #e5e5e5'}}>
-          <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+        <div style={{borderBottom:'1px solid #30363d'}}>
+          <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+            <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>
               Прогноз просрочки (ML-модель)
             </h2>
           </div>
           <div style={{display:'grid', gridTemplateColumns:'200px 1fr 1fr 1fr', gap:0}}>
             {/* Risk gauge */}
-            <div style={{padding:'24px 40px', borderRight:'1px solid #e5e5e5', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+            <div style={{padding:'24px 40px', borderRight:'1px solid #30363d', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
               <div style={{
                 width:72, height:72, borderRadius:'50%',
                 display:'flex', alignItems:'center', justifyContent:'center',
-                background: riskPrediction.risk_category === 0 ? '#f0fdf4' : riskPrediction.risk_category === 1 ? '#fffbeb' : '#fef2f2',
-                border: `3px solid ${riskPrediction.risk_category === 0 ? '#22c55e' : riskPrediction.risk_category === 1 ? '#eab308' : '#ef4444'}`,
+                background: riskPrediction.risk_category === 0 ? 'rgba(63,185,80,0.15)' : riskPrediction.risk_category === 1 ? 'rgba(210,153,34,0.15)' : 'rgba(248,81,73,0.15)',
+                border: `3px solid ${riskPrediction.risk_category === 0 ? '#3fb950' : riskPrediction.risk_category === 1 ? '#d29922' : '#f85149'}`,
                 marginBottom:8,
               }}>
                 <span style={{fontSize:'1.4rem', fontWeight:700, color: riskPrediction.risk_category === 0 ? '#16a34a' : riskPrediction.risk_category === 1 ? '#ca8a04' : '#dc2626'}}>
@@ -400,18 +400,18 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               <div style={{fontSize:'0.82rem', fontWeight:600, color: riskPrediction.risk_category === 0 ? '#16a34a' : riskPrediction.risk_category === 1 ? '#ca8a04' : '#dc2626'}}>
                 {riskPrediction.risk_label || '—'}
               </div>
-              <div style={{fontSize:'0.7rem', color:'#a3a3a3', marginTop:2}}>risk score</div>
+              <div style={{fontSize:'0.7rem', color:'#484f58', marginTop:2}}>risk score</div>
             </div>
             {/* Probabilities */}
-            <div style={{padding:'24px 30px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Вероятности</div>
+            <div style={{padding:'24px 30px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Вероятности</div>
               {riskPrediction.probabilities && Object.entries(riskPrediction.probabilities).map(([label, prob]) => (
                 <div key={label} style={{marginBottom:8}}>
                   <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', marginBottom:3}}>
-                    <span style={{color:'#525252'}}>{label}</span>
-                    <span style={{fontWeight:600, color:'#1a1a1a'}}>{(prob * 100).toFixed(1)}%</span>
+                    <span style={{color:'#8b949e'}}>{label}</span>
+                    <span style={{fontWeight:600, color:'#e6edf3'}}>{(prob * 100).toFixed(1)}%</span>
                   </div>
-                  <div style={{height:6, background:'#f5f5f5', borderRadius:3, overflow:'hidden'}}>
+                  <div style={{height:6, background:'#21262d', borderRadius:3, overflow:'hidden'}}>
                     <div style={{
                       height:'100%', borderRadius:3,
                       width: `${prob * 100}%`,
@@ -422,8 +422,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               ))}
             </div>
             {/* Key features */}
-            <div style={{padding:'24px 30px', borderRight:'1px solid #e5e5e5'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Ключевые признаки</div>
+            <div style={{padding:'24px 30px', borderRight:'1px solid #30363d'}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Ключевые признаки</div>
               {riskPrediction.features && (
                 <table style={{fontSize:'0.78rem', width:'100%'}}>
                   <tbody>
@@ -434,7 +434,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                       ['Доля просрочек', `${((riskPrediction.features.overdue_share_12m || 0) * 100).toFixed(0)}%`],
                       ['Обещаний', riskPrediction.features.promises_count || 0],
                     ].map(([k, v]) => (
-                      <tr key={k}><td style={{color:'#737373', padding:'3px 0'}}>{k}</td><td style={{color:'#1a1a1a', fontWeight:500, textAlign:'right'}}>{v}</td></tr>
+                      <tr key={k}><td style={{color:'#8b949e', padding:'3px 0'}}>{k}</td><td style={{color:'#e6edf3', fontWeight:500, textAlign:'right'}}>{v}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -442,8 +442,8 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
             </div>
             {/* Recommendation */}
             <div style={{padding:'24px 30px'}}>
-              <div style={{color:'#737373', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Рекомендация</div>
-              <div style={{fontSize:'0.85rem', color:'#1a1a1a', lineHeight:1.5}}>
+              <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Рекомендация</div>
+              <div style={{fontSize:'0.85rem', color:'#e6edf3', lineHeight:1.5}}>
                 {riskPrediction.risk_category === 0 && '✅ Стандартное сопровождение. Риск просрочки минимален.'}
                 {riskPrediction.risk_category === 1 && '⚠️ Повышенное внимание. Рекомендуется превентивный контакт и мониторинг платёжной дисциплины.'}
                 {riskPrediction.risk_category === 2 && '🔴 Высокий риск. Необходимо срочное воздействие: звонок, предложение реструктуризации.'}
@@ -454,9 +454,9 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
       )}
 
       {/* Credit Events */}
-      <div style={{borderBottom:'1px solid #e5e5e5'}}>
-        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+      <div style={{borderBottom:'1px solid #30363d'}}>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>
             События кредита ({creditEvents.length})
           </h2>
         </div>
@@ -464,7 +464,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           <div style={{padding:'20px 40px'}}>
             <div style={{position:'relative'}}>
               {/* Timeline line */}
-              <div style={{position:'absolute', left:15, top:8, bottom:8, width:2, background:'#e5e5e5'}} />
+              <div style={{position:'absolute', left:15, top:8, bottom:8, width:2, background:'#30363d'}} />
               {creditEvents.slice(0, 30).map((ev, idx) => (
                 <div key={idx} style={{display:'flex', gap:16, marginBottom:idx < creditEvents.length - 1 ? 12 : 0, position:'relative'}}>
                   {/* Icon dot */}
@@ -479,7 +479,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                   {/* Content */}
                   <div style={{flex:1, paddingTop:2}}>
                     <div style={{display:'flex', alignItems:'baseline', gap:10}}>
-                      <span style={{fontSize:'0.8rem', color:'#737373', minWidth:85}}>{formatDate(ev.date)}</span>
+                      <span style={{fontSize:'0.8rem', color:'#8b949e', minWidth:85}}>{formatDate(ev.date)}</span>
                       <span style={{
                         fontSize:'0.7rem', fontWeight:600, textTransform:'uppercase',
                         padding:'1px 8px', borderRadius:3,
@@ -489,94 +489,94 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                         {ev.label}
                       </span>
                     </div>
-                    <div style={{fontSize:'0.82rem', color:'#525252', marginTop:2}}>{ev.description}</div>
+                    <div style={{fontSize:'0.82rem', color:'#8b949e', marginTop:2}}>{ev.description}</div>
                   </div>
                 </div>
               ))}
               {creditEvents.length > 30 && (
-                <div style={{textAlign:'center', color:'#737373', fontSize:'0.8rem', paddingTop:8}}>
+                <div style={{textAlign:'center', color:'#8b949e', fontSize:'0.8rem', paddingTop:8}}>
                   … и ещё {creditEvents.length - 30} событий
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет событий</div>
+          <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Нет событий</div>
         )}
       </div>
 
       {/* Interactions */}
-      <div style={{borderBottom:'1px solid #e5e5e5'}}>
-        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>Взаимодействия ({interactions.length})</h2>
+      <div style={{borderBottom:'1px solid #30363d'}}>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>Взаимодействия ({interactions.length})</h2>
         </div>
         {interactions.length > 0 ? (
           <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
             <thead>
-              <tr style={{background:'#fafafa'}}>
-                <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Оператор</th>
-                <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Тип</th>
-                <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Результат</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Сумма обещания</th>
-                <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Комментарий</th>
+              <tr style={{background:'#1c2128'}}>
+                <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Дата</th>
+                <th style={{textAlign:'left', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Оператор</th>
+                <th style={{textAlign:'left', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Тип</th>
+                <th style={{textAlign:'left', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Результат</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Сумма обещания</th>
+                <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Комментарий</th>
               </tr>
             </thead>
             <tbody>
               {interactions.slice(0, 20).map((item, idx) => (
-                <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.datetime)}</td>
-                  <td style={{padding:'10px 20px', color:'#525252', fontSize:'0.82rem'}}>{item.operator_name || '—'}</td>
-                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.intervention_type === 'phone' ? 'Звонок' : item.intervention_type === 'sms' ? 'СМС' : item.intervention_type === 'email' ? 'Email' : item.intervention_type === 'letter' ? 'Письмо' : item.intervention_type === 'visit' ? 'Визит' : item.intervention_type}</td>
-                  <td style={{padding:'10px 20px', color:'#1a1a1a'}}>{item.status === 'completed' ? 'Завершено' : item.status === 'no_answer' ? 'Не дозвон' : item.status === 'promise' ? 'Обещание' : item.status === 'refuse' ? 'Отказ' : item.status === 'callback' ? 'Перезвонить' : item.status}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.promise_amount) > 0 ? '#16a34a' : '#a3a3a3', fontWeight: parseFloat(item.promise_amount) > 0 ? 500 : 400}}>
+                <tr key={idx} style={{borderBottom:'1px solid #30363d'}}>
+                  <td style={{padding:'10px 40px', color:'#e6edf3'}}>{formatDate(item.datetime)}</td>
+                  <td style={{padding:'10px 20px', color:'#8b949e', fontSize:'0.82rem'}}>{item.operator_name || '—'}</td>
+                  <td style={{padding:'10px 20px', color:'#e6edf3'}}>{item.intervention_type === 'phone' ? 'Звонок' : item.intervention_type === 'sms' ? 'СМС' : item.intervention_type === 'email' ? 'Email' : item.intervention_type === 'letter' ? 'Письмо' : item.intervention_type === 'visit' ? 'Визит' : item.intervention_type}</td>
+                  <td style={{padding:'10px 20px', color:'#e6edf3'}}>{item.status === 'completed' ? 'Завершено' : item.status === 'no_answer' ? 'Не дозвон' : item.status === 'promise' ? 'Обещание' : item.status === 'refuse' ? 'Отказ' : item.status === 'callback' ? 'Перезвонить' : item.status}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.promise_amount) > 0 ? '#3fb950' : '#484f58', fontWeight: parseFloat(item.promise_amount) > 0 ? 500 : 400}}>
                     {parseFloat(item.promise_amount) > 0 ? formatCurrency(item.promise_amount) : '—'}
                   </td>
-                  <td style={{padding:'10px 40px', color:'#737373'}}>{item.notes || '—'}</td>
+                  <td style={{padding:'10px 40px', color:'#8b949e'}}>{item.notes || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет записей</div>
+          <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Нет записей</div>
         )}
       </div>
 
       {/* Payments */}
-      <div style={{borderBottom:'1px solid #e5e5e5'}}>
-        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa'}}>
-          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>Платежи ({payments.length})</h2>
+      <div style={{borderBottom:'1px solid #30363d'}}>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128'}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>Платежи ({payments.length})</h2>
         </div>
         {payments.length > 0 ? (
           <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
             <thead>
-              <tr style={{background:'#fafafa'}}>
-                <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Сумма</th>
-                <th style={{textAlign:'left', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Тип</th>
-                <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Статус</th>
+              <tr style={{background:'#1c2128'}}>
+                <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Дата</th>
+                <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Сумма</th>
+                <th style={{textAlign:'left', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Тип</th>
+                <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Статус</th>
               </tr>
             </thead>
             <tbody>
               {payments.slice(0, 15).map((item, idx) => (
-                <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                  <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.payment_date)}</td>
-                  <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a', fontWeight:500}}>{formatCurrency(item.amount)}</td>
-                  <td style={{padding:'10px 20px', color:'#525252'}}>{PAYMENT_TYPE_LABELS[item.payment_type] || item.payment_type}</td>
-                  <td style={{padding:'10px 40px', color:'#525252'}}>{item.status === 'completed' ? 'Исполнен' : item.status}</td>
+                <tr key={idx} style={{borderBottom:'1px solid #30363d'}}>
+                  <td style={{padding:'10px 40px', color:'#e6edf3'}}>{formatDate(item.payment_date)}</td>
+                  <td style={{padding:'10px 20px', textAlign:'right', color:'#e6edf3', fontWeight:500}}>{formatCurrency(item.amount)}</td>
+                  <td style={{padding:'10px 20px', color:'#8b949e'}}>{PAYMENT_TYPE_LABELS[item.payment_type] || item.payment_type}</td>
+                  <td style={{padding:'10px 40px', color:'#8b949e'}}>{item.status === 'completed' ? 'Исполнен' : item.status}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет платежей</div>
+          <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Нет платежей</div>
         )}
       </div>
 
       {/* Credit States - Tabs */}
       <div>
-        <div style={{padding:'16px 40px', borderBottom:'1px solid #e5e5e5', background:'#fafafa', display:'flex', alignItems:'center', gap:16}}>
-          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#525252', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+        <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', background:'#1c2128', display:'flex', alignItems:'center', gap:16}}>
+          <h2 style={{margin:0, fontSize:'0.8rem', fontWeight:500, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.5px'}}>
             История состояний
           </h2>
           <div style={{display:'flex', gap:4, marginLeft:12}}>
@@ -584,9 +584,9 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               onClick={() => setStatesTab('monthly')}
               style={{
                 padding:'4px 14px', fontSize:'0.78rem', borderRadius:4, cursor:'pointer',
-                border: statesTab === 'monthly' ? '1px solid #2563eb' : '1px solid #d4d4d4',
-                background: statesTab === 'monthly' ? '#eff6ff' : '#fff',
-                color: statesTab === 'monthly' ? '#2563eb' : '#525252',
+                border: statesTab === 'monthly' ? '1px solid #388bfd' : '1px solid #30363d',
+                background: statesTab === 'monthly' ? 'rgba(56,139,253,0.15)' : '#161b22',
+                color: statesTab === 'monthly' ? '#58a6ff' : '#8b949e',
                 fontWeight: statesTab === 'monthly' ? 600 : 400,
               }}
             >
@@ -596,9 +596,9 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               onClick={() => { setStatesTab('daily'); fetchDailyStates(); setDailyPage(1); }}
               style={{
                 padding:'4px 14px', fontSize:'0.78rem', borderRadius:4, cursor:'pointer',
-                border: statesTab === 'daily' ? '1px solid #2563eb' : '1px solid #d4d4d4',
-                background: statesTab === 'daily' ? '#eff6ff' : '#fff',
-                color: statesTab === 'daily' ? '#2563eb' : '#525252',
+                border: statesTab === 'daily' ? '1px solid #388bfd' : '1px solid #30363d',
+                background: statesTab === 'daily' ? 'rgba(56,139,253,0.15)' : '#161b22',
+                color: statesTab === 'daily' ? '#58a6ff' : '#8b949e',
                 fontWeight: statesTab === 'daily' ? 600 : 400,
               }}
             >
@@ -612,28 +612,28 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           creditStates.length > 0 ? (
             <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
               <thead>
-                <tr style={{background:'#fafafa'}}>
-                  <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
-                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
-                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
-                  <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
-                  <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
+                <tr style={{background:'#1c2128'}}>
+                  <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Дата</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Основной долг</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Просроч. ОД</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Просроч. %</th>
+                  <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Штрафы</th>
+                  <th style={{textAlign:'center', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>DPD</th>
                 </tr>
               </thead>
               <tbody>
                 {creditStates.map((item, idx) => (
-                  <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                    <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
-                    <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
-                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                  <tr key={idx} style={{borderBottom:'1px solid #30363d'}}>
+                    <td style={{padding:'10px 40px', color:'#e6edf3'}}>{formatDate(item.state_date)}</td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color:'#e6edf3'}}>{formatCurrency(item.principal_debt)}</td>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#f85149' : '#e6edf3'}}>
                       {formatCurrency(item.overdue_principal)}
                     </td>
-                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#f85149' : '#e6edf3'}}>
                       {formatCurrency(item.overdue_interest)}
                     </td>
-                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
-                    <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#f85149' : '#e6edf3'}}>{formatCurrency(item.penalties)}</td>
+                    <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#f85149' : '#e6edf3'}}>
                       {item.overdue_days ?? 0}
                     </td>
                   </tr>
@@ -641,40 +641,40 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               </tbody>
             </table>
           ) : (
-            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет данных</div>
+            <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Нет данных</div>
           )
         )}
 
         {/* Daily states tab */}
         {statesTab === 'daily' && (
           dailyLoading ? (
-            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Загрузка ежедневных данных...</div>
+            <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Загрузка ежедневных данных...</div>
           ) : dailyStates.length > 0 ? (
             <>
               <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
                 <thead>
-                  <tr style={{background:'#fafafa'}}>
-                    <th style={{textAlign:'left', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Дата</th>
-                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Основной долг</th>
-                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. ОД</th>
-                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Просроч. %</th>
-                    <th style={{textAlign:'right', padding:'10px 20px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>Штрафы</th>
-                    <th style={{textAlign:'center', padding:'10px 40px', color:'#525252', fontWeight:500, borderBottom:'1px solid #e5e5e5'}}>DPD</th>
+                  <tr style={{background:'#1c2128'}}>
+                    <th style={{textAlign:'left', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Дата</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Основной долг</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Просроч. ОД</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Просроч. %</th>
+                    <th style={{textAlign:'right', padding:'10px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Штрафы</th>
+                    <th style={{textAlign:'center', padding:'10px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>DPD</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dailyStates.slice(0, dailyPage * DAILY_PAGE_SIZE).map((item, idx) => (
-                    <tr key={idx} style={{borderBottom:'1px solid #e5e5e5'}}>
-                      <td style={{padding:'10px 40px', color:'#1a1a1a'}}>{formatDate(item.state_date)}</td>
-                      <td style={{padding:'10px 20px', textAlign:'right', color:'#1a1a1a'}}>{formatCurrency(item.principal_debt)}</td>
-                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                    <tr key={idx} style={{borderBottom:'1px solid #30363d'}}>
+                      <td style={{padding:'10px 40px', color:'#e6edf3'}}>{formatDate(item.state_date)}</td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color:'#e6edf3'}}>{formatCurrency(item.principal_debt)}</td>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_principal) > 0 ? '#f85149' : '#e6edf3'}}>
                         {formatCurrency(item.overdue_principal)}
                       </td>
-                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.overdue_interest) > 0 ? '#f85149' : '#e6edf3'}}>
                         {formatCurrency(item.overdue_interest)}
                       </td>
-                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#b91c1c' : '#1a1a1a'}}>{formatCurrency(item.penalties)}</td>
-                      <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#b91c1c' : '#1a1a1a'}}>
+                      <td style={{padding:'10px 20px', textAlign:'right', color: parseFloat(item.penalties) > 0 ? '#f85149' : '#e6edf3'}}>{formatCurrency(item.penalties)}</td>
+                      <td style={{padding:'10px 40px', textAlign:'center', color: item.overdue_days > 0 ? '#f85149' : '#e6edf3'}}>
                         {item.overdue_days ?? 0}
                       </td>
                     </tr>
@@ -682,12 +682,12 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                 </tbody>
               </table>
               {dailyPage * DAILY_PAGE_SIZE < dailyStates.length && (
-                <div style={{padding:'16px 40px', textAlign:'center', borderTop:'1px solid #e5e5e5'}}>
+                <div style={{padding:'16px 40px', textAlign:'center', borderTop:'1px solid #30363d'}}>
                   <button
                     onClick={() => setDailyPage(p => p + 1)}
                     style={{
                       padding:'8px 24px', fontSize:'0.8rem', borderRadius:4, cursor:'pointer',
-                      border:'1px solid #d4d4d4', background:'#fff', color:'#525252',
+                      border:'1px solid #30363d', background:'#161b22', color:'#8b949e',
                     }}
                   >
                     Показать ещё {Math.min(DAILY_PAGE_SIZE, dailyStates.length - dailyPage * DAILY_PAGE_SIZE)} из {dailyStates.length - dailyPage * DAILY_PAGE_SIZE} записей
@@ -696,7 +696,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
               )}
             </>
           ) : (
-            <div style={{padding:'40px', textAlign:'center', color:'#737373'}}>Нет данных</div>
+            <div style={{padding:'40px', textAlign:'center', color:'#8b949e'}}>Нет данных</div>
           )
         )}
       </div>

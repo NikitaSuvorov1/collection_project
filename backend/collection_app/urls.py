@@ -42,6 +42,8 @@ urlpatterns = [
     # ML Models & Scoring
     path('ml/models/', views.MLModelMetricsView.as_view(), name='ml-models'),
     path('ml/models/<int:model_id>/', views.MLModelMetricsView.as_view(), name='ml-model-detail'),
+    path('ml/train-overdue/', views.TrainOverdueModelView.as_view(), name='train-overdue-model'),
+    path('ml/train-approval/', views.TrainApprovalModelView.as_view(), name='train-approval-model'),
     path('scoring/dashboard/', views.ScoringDashboardView.as_view(), name='scoring-dashboard'),
     
     # A/B Testing

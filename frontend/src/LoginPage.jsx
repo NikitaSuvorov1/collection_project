@@ -124,7 +124,7 @@ export default function LoginPage({ onLogin }) {
           </div>
           
           {error && (
-            <div className="error" style={{ fontSize: 14, color: '#ef4444' }}>
+            <div className="error" style={{ fontSize: 14, color: '#f85149' }}>
               {error}
             </div>
           )}

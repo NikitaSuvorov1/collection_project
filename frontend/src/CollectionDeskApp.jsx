@@ -30,8 +30,8 @@ const MOCK_HISTORY = [];
 // Стили для табов в сайдбаре
 const tabStyle = (active) => ({
   flex: 1, padding: '6px 0', textAlign: 'center', cursor: 'pointer',
-  fontWeight: 600, fontSize: 12, borderBottom: active ? '2px solid #2563eb' : '2px solid transparent',
-  color: active ? '#2563eb' : '#6b7280', background: active ? '#eff6ff' : 'transparent',
+  fontWeight: 600, fontSize: 12, borderBottom: active ? '2px solid #388bfd' : '2px solid transparent',
+  color: active ? '#58a6ff' : '#8b949e', background: active ? 'rgba(56,139,253,0.1)' : 'transparent',
   transition: 'all 0.15s',
 });
 
@@ -39,8 +39,8 @@ const formatCurrency = (v) => Number(v || 0).toLocaleString("ru-RU", { style: "c
 const relativeDate = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
 
 const getRiskColor = (segment) => {
-  const colors = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444', critical: '#dc2626' };
-  return colors[segment] || '#6b7280';
+  const colors = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444', critical: '#f85149' };
+  return colors[segment] || '#8b949e';
 };
 
 const getUrgencyLabel = (u) => {
@@ -405,7 +405,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             </select>
           </div>
           {/* === Вкладки === */}
-          <div style={{display:'flex',borderBottom:'1px solid #e5e7eb',marginBottom:0}}>
+          <div style={{display:'flex',borderBottom:'1px solid #30363d',marginBottom:0}}>
             <div style={tabStyle(sidebarTab === 'pending')} onClick={() => setSidebarTab('pending')}>
               📋 К отработке ({pendingVisible.length})
             </div>
@@ -435,7 +435,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                   <div className="cli-amount">{formatCurrency(d.outstanding)}</div>
                   <div className="cli-days">{d.daysPastDue} дн.</div>
                 </div>
-                <div style={{width:'100%',fontSize:12,color:'#6b7280',marginTop:8}}>Попыток: {d.attempts} • Последний контакт: {relativeDate(d.lastContact)}</div>
+                <div style={{width:'100%',fontSize:12,color:'#8b949e',marginTop:8}}>Попыток: {d.attempts} • Последний контакт: {relativeDate(d.lastContact)}</div>
               </div>
             ))}
 
@@ -453,7 +453,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                   <div className="cli-amount">{formatCurrency(d.outstanding)}</div>
                   <div className="cli-days">{d.daysPastDue} дн.</div>
                 </div>
-                <div style={{width:'100%',fontSize:12,color:'#6b7280',marginTop:8}}>
+                <div style={{width:'100%',fontSize:12,color:'#8b949e',marginTop:8}}>
                   <span style={{color:'#16a34a',fontWeight:600}}>Сегодня: {d.todayCount} воздейств.</span> • Последний: {relativeDate(d.lastContact)}
                 </div>
               </div>
@@ -472,12 +472,12 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                   <div style={{marginTop:8}}>Сумма задолженности: <strong>{formatCurrency(debtBreakdown.total > 0 ? debtBreakdown.total : selected.outstanding)}</strong></div>
                   <div className="muted">Просрочка: {selected.daysPastDue} дней</div>
                   {debtBreakdown.total > 0 && (
-                    <div style={{marginTop:8,padding:'8px 12px',background:'#fef2f2',borderRadius:8,border:'1px solid #fecaca',fontSize:13}}>
-                      <div style={{fontWeight:600,fontSize:12,color:'#991b1b',marginBottom:4}}>Структура задолженности:</div>
+                    <div style={{marginTop:8,padding:'8px 12px',background:'rgba(248,81,73,0.15)',borderRadius:8,border:'1px solid rgba(248,81,73,0.4)',fontSize:13}}>
+                      <div style={{fontWeight:600,fontSize:12,color:'#f85149',marginBottom:4}}>Структура задолженности:</div>
                       <div style={{display:'flex',justifyContent:'space-between'}}><span>Основной долг:</span><strong>{formatCurrency(debtBreakdown.overduePrincipal)}</strong></div>
                       <div style={{display:'flex',justifyContent:'space-between'}}><span>Проценты:</span><strong>{formatCurrency(debtBreakdown.overdueInterest)}</strong></div>
-                      <div style={{display:'flex',justifyContent:'space-between'}}><span>Штрафы/пени:</span><strong style={{color:'#dc2626'}}>{formatCurrency(debtBreakdown.penalties)}</strong></div>
-                      <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid #fecaca',marginTop:4,paddingTop:4,fontWeight:700}}><span>Итого:</span><span>{formatCurrency(debtBreakdown.total)}</span></div>
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span>Штрафы/пени:</span><strong style={{color:'#f85149'}}>{formatCurrency(debtBreakdown.penalties)}</strong></div>
+                      <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(248,81,73,0.4)',marginTop:4,paddingTop:4,fontWeight:700}}><span>Итого:</span><span>{formatCurrency(debtBreakdown.total)}</span></div>
                     </div>
                   )}
                 </div>
@@ -534,9 +534,9 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                       </div>
                     )}
                     {h.result === 'refuse' && h.refusalReason && (
-                      <div style={{color:'#dc2626',fontSize:13,marginTop:2}}>Причина: {h.refusalReason}</div>
+                      <div style={{color:'#f85149',fontSize:13,marginTop:2}}>Причина: {h.refusalReason}</div>
                     )}
-                    {h.note && <div style={{color:'#6b7280',fontSize:13}}>{h.note}</div>}
+                    {h.note && <div style={{color:'#8b949e',fontSize:13}}>{h.note}</div>}
                   </div>
                 ))}
               </div>
@@ -550,11 +550,11 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             <div className="cti-row"><div className="muted">Таймер:</div><div className="timer">{getCallDuration()}</div></div>
             
             {/* Copilot Suggestions */}
-            <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:8,padding:10,marginBottom:10}}>
-              <div style={{fontSize:12,fontWeight:600,color:'#166534',marginBottom:6}}>🤖 Copilot подсказки:</div>
-              <div style={{fontSize:11,color:'#6b7280'}}>Фразы для этого типа клиента:</div>
+            <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,marginBottom:10}}>
+              <div style={{fontSize:12,fontWeight:600,color:'#3fb950',marginBottom:6}}>🤖 Copilot подсказки:</div>
+              <div style={{fontSize:11,color:'#8b949e'}}>Фразы для этого типа клиента:</div>
               {selectedCopilotPhrases.slice(0,2).map((phrase, i) => (
-                <div key={i} style={{fontSize:12,color:'#374151',padding:'4px 0',cursor:'pointer'}} 
+                <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'4px 0',cursor:'pointer'}} 
                      onClick={() => navigator.clipboard.writeText(phrase)} title="Клик чтобы скопировать">
                   → {phrase}
                 </div>
@@ -574,28 +574,28 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
 
             {/* Поля для обещания */}
             {resultCode === 'promise_to_pay' && (
-              <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#166534',display:'block',marginBottom:6}}>💰 Данные обещания</label>
+              <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
+                <label style={{fontSize:12,fontWeight:600,color:'#3fb950',display:'block',marginBottom:6}}>💰 Данные обещания</label>
                 <div style={{marginBottom:6}}>
-                  <label style={{fontSize:12,color:'#6b7280',display:'block'}}>Сумма обещания (₽)</label>
+                  <label style={{fontSize:12,color:'#8b949e',display:'block'}}>Сумма обещания (₽)</label>
                   <input type="number" value={promiseAmount} onChange={e=>setPromiseAmount(e.target.value)}
                     placeholder="Например: 15000" min="0" step="1000"
-                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #d1d5db',fontSize:14,marginTop:2,boxSizing:'border-box'}} />
+                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:14,marginTop:2,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}} />
                 </div>
                 <div>
-                  <label style={{fontSize:12,color:'#6b7280',display:'block'}}>Дата обещанной оплаты</label>
+                  <label style={{fontSize:12,color:'#8b949e',display:'block'}}>Дата обещанной оплаты</label>
                   <input type="date" value={promiseDate} onChange={e=>setPromiseDate(e.target.value)}
-                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #d1d5db',fontSize:14,marginTop:2,boxSizing:'border-box'}} />
+                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:14,marginTop:2,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}} />
                 </div>
               </div>
             )}
 
             {/* Поля для отказа */}
             {resultCode === 'decline' && (
-              <div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#991b1b',display:'block',marginBottom:6}}>❌ Причина отказа</label>
+              <div style={{background:'rgba(248,81,73,0.15)',border:'1px solid rgba(248,81,73,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
+                <label style={{fontSize:12,fontWeight:600,color:'#f85149',display:'block',marginBottom:6}}>❌ Причина отказа</label>
                 <select value={refusalReason} onChange={e=>setRefusalReason(e.target.value)}
-                  style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #d1d5db',fontSize:13,boxSizing:'border-box'}}>
+                  style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:13,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}}>
                   <option value="">— Выберите причину —</option>
                   {REFUSAL_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
