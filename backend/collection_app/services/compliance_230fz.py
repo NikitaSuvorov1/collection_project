@@ -29,7 +29,7 @@ from datetime import datetime, timedelta, date
 from django.utils import timezone
 from django.db.models import Count, Q
 
-from collection_app.models import Client, Intervention, AuditLog
+from collection_app.models import Client, Intervention, AuditLog, ViolationLog
 
 
 # === Лимиты по 230-ФЗ ===
@@ -277,19 +277,46 @@ def validate_intervention(data: dict) -> dict:
 
 def log_compliance_violation(client_id: int, operator_id: int,
                              violations: list,
-                             action: str = 'contact_blocked'):
-    """Логирование нарушения 230-ФЗ в аудит."""
+                             action: str = 'contact_blocked',
+                             contact_type: str = ''):
+    """Логирование нарушения 230-ФЗ в AuditLog + ViolationLog."""
+    severity = 'warning' if action == 'contact_blocked' else 'critical'
+    details = {
+        'violations': violations,
+        'timestamp': timezone.now().isoformat(),
+        'law': '230-ФЗ',
+    }
+    # Запись в общий AuditLog
     AuditLog.objects.create(
         action=action,
         operator_id=operator_id,
         client_id=client_id,
-        severity='warning' if action == 'contact_blocked' else 'critical',
-        details={
-            'violations': violations,
-            'timestamp': timezone.now().isoformat(),
-            'law': '230-ФЗ',
-        },
+        severity=severity,
+        details=details,
     )
+    # Запись в специализированный ViolationLog
+    rule_map = {
+        'Ст.1': 'st1_time', 'Ст.2': 'st2_frequency', 'Ст.3': 'st3_refusal',
+        'Ст.4': 'st4_third_party', 'Ст.5': 'st5_script', 'Ст.6': 'st6_identification',
+        'Ст.7': 'st7_bankruptcy', 'Ст.8': 'st8_hidden_number', 'Ст.9': 'st9_interval',
+        'Ст.10': 'st10_history', 'Ст.11': 'st11_personal_data',
+    }
+    for v_text in violations:
+        rule_type = 'other'
+        for prefix, code in rule_map.items():
+            if v_text.startswith(prefix):
+                rule_type = code
+                break
+        ViolationLog.objects.create(
+            client_id=client_id,
+            operator_id=operator_id,
+            rule_type=rule_type,
+            severity=severity,
+            description=v_text,
+            action_blocked=(action == 'contact_blocked'),
+            contact_type=contact_type,
+            details=details,
+        )
 
 
 def check_bankruptcy(client_id: int) -> dict:

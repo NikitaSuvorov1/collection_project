@@ -3,7 +3,7 @@ from .models import (
     Client, Credit, Payment, Intervention, Operator, ScoringResult, 
     Assignment, CreditApplication, CreditState, ClientBehaviorProfile,
     NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast,
-    BankruptcyCheck, MLModelVersion, AuditLog,
+    BankruptcyCheck, MLModelVersion, AuditLog, ViolationLog,
 )
 from django.contrib.auth.models import User
 
@@ -32,6 +32,8 @@ class CreditSerializer(serializers.ModelSerializer):
     client_phone = serializers.CharField(source='client.phone_mobile', read_only=True)
     latest_state = serializers.SerializerMethodField()
     term_months = serializers.SerializerMethodField()
+    delinquency_bucket = serializers.CharField(read_only=True)
+    days_past_due = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = Credit
@@ -150,6 +152,20 @@ class ComplianceAlertSerializer(serializers.ModelSerializer):
     class Meta:
         model = ComplianceAlert
         fields = '__all__'
+
+
+class ViolationLogSerializer(serializers.ModelSerializer):
+    client_name = serializers.CharField(source='client.full_name', read_only=True)
+    operator_name = serializers.SerializerMethodField()
+    rule_type_display = serializers.CharField(source='get_rule_type_display', read_only=True)
+    severity_display = serializers.CharField(source='get_severity_display', read_only=True)
+
+    class Meta:
+        model = ViolationLog
+        fields = '__all__'
+
+    def get_operator_name(self, obj):
+        return obj.operator.full_name if obj.operator else None
 
 class ReturnForecastSerializer(serializers.ModelSerializer):
     recommendation_display = serializers.CharField(source='get_recommendation_display', read_only=True)

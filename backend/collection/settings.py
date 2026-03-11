@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
     'collection_app',
 ]
 
@@ -99,4 +100,22 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Collection App API',
+    'DESCRIPTION': 'API системы управления взысканием задолженности (ВКР)',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Clients', 'description': 'Управление клиентами'},
+        {'name': 'Credits', 'description': 'Кредиты и договоры'},
+        {'name': 'Interventions', 'description': 'Взаимодействия с должниками'},
+        {'name': 'Scoring', 'description': 'ML-скоринг и прогнозирование'},
+        {'name': 'Compliance', 'description': '230-ФЗ комплаенс'},
+        {'name': 'Distribution', 'description': 'Распределение клиентов'},
+        {'name': 'Dashboard', 'description': 'Аналитика и дашборд'},
+    ],
 }

@@ -12,7 +12,7 @@ from .models import (
     Client, Credit, Payment, Intervention, Operator, ScoringResult, 
     Assignment, CreditApplication, CreditState, ClientBehaviorProfile,
     NextBestAction, SmartScript, ConversationAnalysis, ComplianceAlert, ReturnForecast,
-    BankruptcyCheck, MLModelVersion, AuditLog,
+    BankruptcyCheck, MLModelVersion, AuditLog, ViolationLog,
 )
 from .serializers import (
     ClientSerializer, CreditSerializer, PaymentSerializer, InterventionSerializer,
@@ -21,6 +21,7 @@ from .serializers import (
     SmartScriptSerializer, ComplianceAlertSerializer, ReturnForecastSerializer,
     OperatorQueueSerializer, CreditStateSerializer,
     BankruptcyCheckSerializer, MLModelVersionSerializer, AuditLogSerializer,
+    ViolationLogSerializer,
 )
 from .ml.next_best_action import NextBestActionService
 from .ml.psychotyping import PsychotypingService
@@ -1381,6 +1382,30 @@ class ABTestResultsView(APIView):
                 f'{lift}% к contact rate по сравнению с группой A (random)'
             ) if lift else 'Недостаточно данных',
         })
+
+
+# ===== VIOLATION LOG API =====
+
+class ViolationLogView(APIView):
+    """Журнал нарушений 230-ФЗ"""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        qs = ViolationLog.objects.select_related('client', 'operator').all()
+        client_id = request.query_params.get('client_id')
+        operator_id = request.query_params.get('operator_id')
+        rule_type = request.query_params.get('rule_type')
+        severity = request.query_params.get('severity')
+        if client_id:
+            qs = qs.filter(client_id=client_id)
+        if operator_id:
+            qs = qs.filter(operator_id=operator_id)
+        if rule_type:
+            qs = qs.filter(rule_type=rule_type)
+        if severity:
+            qs = qs.filter(severity=severity)
+        qs = qs[:200]
+        return Response(ViolationLogSerializer(qs, many=True).data)
 
 
 # ===== SMART DISTRIBUTION API =====

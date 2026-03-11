@@ -55,6 +55,9 @@ urlpatterns = [
     # Audit Log
     path('audit/', views.AuditLogView.as_view(), name='audit-log'),
     
+    # Violation Log (230-ФЗ)
+    path('violations/', views.ViolationLogView.as_view(), name='violation-log'),
+    
     # Daily credit states (interpolated)
     path('credit-daily-states/', views.CreditDailyStatesView.as_view(), name='credit-daily-states'),
 ]

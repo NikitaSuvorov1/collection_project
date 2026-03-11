@@ -256,6 +256,28 @@ class Credit(models.Model):
     status = models.CharField('Статус кредита', max_length=20, choices=STATUS_CHOICES, default='active')
     actuality_date = models.DateField('Дата актуальности', null=True, blank=True)
 
+    @property
+    def delinquency_bucket(self):
+        """Стадия просрочки (DPD): 0-30, 30-60, 60-90, 90+"""
+        state = self.states.order_by('-state_date').first() if hasattr(self, 'states') else None
+        dpd = state.overdue_days if state and state.overdue_days else 0
+        if dpd <= 0:
+            return 'current'
+        elif dpd <= 30:
+            return '0-30'
+        elif dpd <= 60:
+            return '30-60'
+        elif dpd <= 90:
+            return '60-90'
+        else:
+            return '90+'
+
+    @property
+    def days_past_due(self):
+        """Количество дней просрочки из последнего CreditState"""
+        state = self.states.order_by('-state_date').first() if hasattr(self, 'states') else None
+        return state.overdue_days if state and state.overdue_days else 0
+
     def __str__(self):
         return f"Кредит #{self.id} - {self.client.full_name}"
 
@@ -1652,6 +1674,54 @@ class ReturnForecast(models.Model):
         verbose_name = 'Прогноз возврата'
         verbose_name_plural = 'Прогнозы возврата'
         ordering = ['-calculated_at']
+
+
+class ViolationLog(models.Model):
+    """Журнал нарушений 230-ФЗ — отдельная таблица для аудита комплаенса"""
+    RULE_CHOICES = [
+        ('st1_time', 'Ст.1 Нарушение времени контакта'),
+        ('st2_frequency', 'Ст.2 Превышение частоты контактов'),
+        ('st3_refusal', 'Ст.3 Контакт при отказе клиента'),
+        ('st4_third_party', 'Ст.4 Контакт с третьими лицами без согласия'),
+        ('st5_script', 'Ст.5 Неутверждённый скрипт'),
+        ('st6_identification', 'Ст.6 Нарушение идентификации оператора'),
+        ('st7_bankruptcy', 'Ст.7 Контакт с банкротом'),
+        ('st8_hidden_number', 'Ст.8 Скрытый номер звонящего'),
+        ('st9_interval', 'Ст.9 Нарушение минимального интервала'),
+        ('st10_history', 'Ст.10 Нарушение хранения истории'),
+        ('st11_personal_data', 'Ст.11 Нарушение 152-ФЗ ПДн'),
+        ('other', 'Иное'),
+    ]
+    SEVERITY_CHOICES = [
+        ('low', 'Низкая'),
+        ('medium', 'Средняя'),
+        ('high', 'Высокая'),
+        ('critical', 'Критическая'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='violations', verbose_name='Клиент')
+    operator = models.ForeignKey(Operator, on_delete=models.SET_NULL, null=True, blank=True, related_name='violations', verbose_name='Оператор')
+    rule_type = models.CharField('Тип нарушения', max_length=30, choices=RULE_CHOICES)
+    severity = models.CharField('Серьёзность', max_length=10, choices=SEVERITY_CHOICES, default='medium')
+    description = models.TextField('Описание нарушения')
+    action_blocked = models.BooleanField('Действие заблокировано', default=True)
+    contact_type = models.CharField('Канал контакта', max_length=20, blank=True)
+    details = models.JSONField('Подробности', default=dict, blank=True)
+    created_at = models.DateTimeField('Дата нарушения', auto_now_add=True)
+
+    def __str__(self):
+        return f"Нарушение {self.get_rule_type_display()} — клиент {self.client_id}"
+
+    class Meta:
+        verbose_name = 'Нарушение 230-ФЗ'
+        verbose_name_plural = 'Нарушения 230-ФЗ'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['client', '-created_at'], name='idx_violation_client_dt'),
+            models.Index(fields=['operator', '-created_at'], name='idx_violation_op_dt'),
+            models.Index(fields=['rule_type'], name='idx_violation_rule'),
+            models.Index(fields=['severity'], name='idx_violation_severity'),
+        ]
 
 
 class OperatorStatistics(models.Model):
