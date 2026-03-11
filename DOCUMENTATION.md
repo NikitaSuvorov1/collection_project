@@ -1,7 +1,7 @@
 # Техническая документация
 ## Система управления взысканием задолженности (Collection Management System)
 
-**Версия:** 3.0.0  
+**Версия:** 3.1.0  
 **Дата:** Март 2026  
 **Авторы:** Команда разработки
 
@@ -22,7 +22,8 @@
 11. [Развёртывание](#11-развёртывание)
 12. [Безопасность](#12-безопасность)
 13. [**Collection Workflow (BPMN)**](#13-collection-workflow-bpmn)
-14. [**Roadmap развития**](#14-roadmap-развития)
+14. [**Комплаенс 230-ФЗ**](#14-комплаенс-230-фз)
+15. [**Roadmap развития**](#15-roadmap-развития)
 
 ---
 
@@ -157,6 +158,7 @@ Frontend (React)
 | Python | 3.13 | Язык программирования |
 | Django | 6.0.1 | Web-фреймворк |
 | Django REST Framework | 3.15+ | REST API |
+| drf-spectacular | 0.27+ | OpenAPI / Swagger / ReDoc |
 | scikit-learn | 1.4+ | Машинное обучение |
 | pandas | 2.2+ | Обработка данных |
 | numpy | 1.26+ | Численные вычисления |
@@ -196,10 +198,11 @@ collection_app/
 │   │   └── wsgi.py              # WSGI точка входа
 │   │
 │   └── collection_app/          # Основное приложение
-│       ├── models.py            # Модели данных
-│       ├── views.py             # API endpoints
-│       ├── serializers.py       # Сериализаторы
-│       ├── urls.py              # URL маршруты
+│       ├── models.py            # Модели данных (30+ моделей)
+│       ├── views.py             # API endpoints (16 ViewSets + 15 APIViews)
+│       ├── serializers.py       # Сериализаторы (20+)
+│       ├── urls.py              # URL маршруты (30+ endpoints)
+│       ├── tests.py             # Unit / Integration тесты (37 тестов)
 │       ├── admin.py             # Админ-панель
 │       │
 │       ├── ml/                  # ML модуль
@@ -216,9 +219,11 @@ collection_app/
 │       │   └── saved_models/          # Сохранённые модели
 │       │
 │       ├── services/            # Бизнес-логика
-│       │   ├── distribution.py  # Распределение должников
-│       │   ├── collection_service.py # Сервис взыскания
-│       │   └── workflow_service.py   # Workflow Engine
+│       │   ├── __init__.py
+│       │   ├── distribution.py        # Интеллектуальное распределение (с ML)
+│       │   ├── collection_service.py  # Сервис взыскания (полный цикл)
+│       │   ├── workflow_service.py    # Workflow Engine (Rules Engine)
+│       │   └── compliance_230fz.py    # 230-ФЗ — полный комплаенс (11 статей)
 │       │
 │       ├── middleware/          # Middleware
 │       │   ├── __init__.py
@@ -226,19 +231,23 @@ collection_app/
 │       │
 │       ├── management/          # Django команды
 │       │   └── commands/
-│       │       ├── populate_db.py
-│       │       ├── populate_dashboard_data.py
-│       │       ├── populate_missing_data.py
-│       │       ├── distribute_clients.py
-│       │       ├── run_scoring.py
-│       │       ├── train_loan_model.py
-│       │       ├── train_approval_model.py
-│       │       ├── train_overdue_model.py
-│       │       ├── generate_training_data.py
-│       │       └── generate_killer_features_data.py
+│       │       ├── populate_db.py               # Заполнение БД тестовыми данными
+│       │       ├── populate_dashboard_data.py   # Данные для дашборда
+│       │       ├── populate_missing_data.py     # Заполнение пробелов
+│       │       ├── fill_credit_states.py        # Помесячные состояния кредитов
+│       │       ├── distribute_clients.py        # Распределение клиентов
+│       │       ├── run_scoring.py               # Запуск скоринга
+│       │       ├── score_all_credits.py         # Пакетный скоринг всех кредитов
+│       │       ├── full_scoring_pipeline.py     # Полный pipeline скоринга
+│       │       ├── train_loan_model.py          # Обучение модели одобрения
+│       │       ├── train_approval_model.py      # Обучение модели заявок (GB)
+│       │       ├── train_overdue_model.py       # Обучение модели просрочки (RF)
+│       │       ├── generate_training_data.py    # Генерация обучающей выборки
+│       │       └── generate_killer_features_data.py # Killer-features данные
 │       │
-│       ├── migrations/          # Миграции БД
+│       ├── migrations/          # Миграции БД (8 миграций)
 │       └── fixtures/            # Тестовые данные
+│           └── initial_data.json
 │
 ├── frontend/                    # Клиентская часть
 │   ├── package.json            # NPM зависимости
@@ -246,7 +255,7 @@ collection_app/
 │   │
 │   └── src/
 │       ├── main.jsx            # React точка входа
-│       ├── App.jsx             # Корневой компонент
+│       ├── App.jsx             # Корневой компонент + рабочий стол оператора
 │       ├── styles.css          # Глобальные стили
 │       │
 │       ├── LoginPage.jsx       # Страница входа
@@ -254,8 +263,11 @@ collection_app/
 │       ├── CreditsPage.jsx     # Реестр кредитов
 │       ├── CreditDetailPage.jsx # Детали кредита
 │       ├── Client360Page.jsx   # Профиль клиента 360°
-│       ├── CollectionDeskApp.jsx # Рабочий стол оператора
-│       ├── LoanPredictionPage.jsx # Прогноз одобрения
+│       ├── CollectionDeskApp.jsx # Рабочий стол оператора (устар.)
+│       ├── LoanPredictionPage.jsx    # Прогноз одобрения кредита
+│       ├── LoanTrainingPage.jsx      # Обучение модели одобрения (31 признак)
+│       ├── ModelTrainingPage.jsx     # Обучение модели просрочки (26 признаков)
+│       ├── OperatorStatsPage.jsx     # Статистика оператора (KPI)
 │       ├── OverduePredictionPage.jsx # Прогноз просрочки
 │       └── DatabaseViewPage.jsx # Просмотр БД
 │
@@ -383,9 +395,32 @@ class Credit(models.Model):
     open_date = models.DateField()                     # Дата открытия
     planned_close_date = models.DateField(null=True)   # Плановая дата закрытия
     actuality_date = models.DateField(null=True)       # Дата актуальности
+
+    # Вычисляемые свойства (property)
+    @property delinquency_bucket  # 'current' | '0-30' | '30-60' | '60-90' | '90+'
+    @property days_past_due       # int — дни просрочки из последнего CreditState
 ```
 
 > **Примечание:** Поле `term_months` не хранится в модели — оно вычисляется в `CreditSerializer` как `round((planned_close_date - open_date).days / 30.44)`.
+
+**Вычисляемые свойства Credit (Delinquency Buckets):**
+
+| Свойство | Тип | Описание |
+|----------|-----|----------|
+| `delinquency_bucket` | str | Стадия просрочки по DPD из последнего CreditState |
+| `days_past_due` | int | Количество дней просрочки из последнего CreditState |
+
+**Бакеты просрочки:**
+
+| Bucket | DPD (Days Past Due) | Описание |
+|--------|---------------------|----------|
+| `current` | 0 | Без просрочки |
+| `0-30` | 1-30 | Ранняя просрочка |
+| `30-60` | 31-60 | Средняя просрочка |
+| `60-90` | 61-90 | Поздняя просрочка |
+| `90+` | 91+ | Дефолт |
+
+Оба поля отдаются через REST API в `CreditSerializer` как `read_only` и доступны в ответе `GET /api/credits/`.
 
 **Допустимые значения:**
 
@@ -505,7 +540,56 @@ class Assignment(models.Model):
     assignment_date = models.DateField()               # Дата назначения
 ```
 
-#### 5.2.7 Operator (Оператор)
+#### 5.2.7 ViolationLog (Журнал нарушений 230-ФЗ)
+
+```python
+class ViolationLog(models.Model):
+    """Журнал нарушений 230-ФЗ — отдельная таблица для аудита комплаенса"""
+
+    client = models.ForeignKey(Client)                 # Клиент
+    operator = models.ForeignKey(Operator, null=True)  # Оператор
+    rule_type = models.CharField(max_length=30)        # Тип нарушения (st1..st11, other)
+    severity = models.CharField(max_length=10)         # Серьёзность (low/medium/high/critical)
+    description = models.TextField()                   # Описание нарушения
+    action_blocked = models.BooleanField(default=True) # Действие заблокировано
+    contact_type = models.CharField(max_length=20)     # Канал контакта
+    details = models.JSONField(default=dict)           # Подробности (JSON)
+    created_at = models.DateTimeField(auto_now_add=True) # Дата нарушения
+```
+
+**Типы нарушений (rule_type):**
+
+| Код | Статья 230-ФЗ | Описание |
+|-----|---------------|----------|
+| `st1_time` | Ст. 1 | Нарушение времени контакта |
+| `st2_frequency` | Ст. 2 | Превышение частоты контактов |
+| `st3_refusal` | Ст. 3 | Контакт при отказе клиента |
+| `st4_third_party` | Ст. 4 | Контакт с третьими лицами без согласия |
+| `st5_script` | Ст. 5 | Неутверждённый скрипт |
+| `st6_identification` | Ст. 6 | Нарушение идентификации оператора |
+| `st7_bankruptcy` | Ст. 7 | Контакт с банкротом |
+| `st8_hidden_number` | Ст. 8 | Скрытый номер звонящего |
+| `st9_interval` | Ст. 9 | Нарушение минимального интервала |
+| `st10_history` | Ст. 10 | Нарушение хранения истории |
+| `st11_personal_data` | Ст. 11 | Нарушение 152-ФЗ (ПДн) |
+| `other` | — | Иное нарушение |
+
+**Уровни серьёзности (severity):**
+
+| Код | Описание |
+|-----|----------|
+| `low` | Низкая |
+| `medium` | Средняя |
+| `high` | Высокая |
+| `critical` | Критическая |
+
+**Индексы:**
+- `idx_violation_client_dt` — (client, -created_at)
+- `idx_violation_op_dt` — (operator, -created_at)
+- `idx_violation_rule` — (rule_type)
+- `idx_violation_severity` — (severity)
+
+#### 5.2.8 Operator (Оператор)
 
 ```python
 class Operator(models.Model):
@@ -536,7 +620,302 @@ class Operator(models.Model):
 | `legal_specialist` | Юрист |
 | `manager` | Менеджер |
 
-### 5.3 Характеристики данных
+#### 5.2.9 Полная карта моделей (30+ сущностей)
+
+Помимо основных сущностей (Client, Credit, CreditState, Payment, Intervention, Assignment, Operator), система включает следующие модели, сгруппированные по доменам:
+
+**RBAC и аудит:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| Role | Системные роли с 15 разрешениями (can_view_clients, can_make_calls...) | ~7 |
+| AuditLog | Журнал всех действий (CRUD, звонки, SMS, эскалации, экспорт), ФЗ-152 | динамич. |
+
+**Collection Case (кейс взыскания):**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| CollectionCase | Центральная сущность взыскания — клиент + кредиты + стадия + приоритет + ML-прогнозы | динамич. |
+| CollectionStageHistory | История переходов между стадиями (pre_collection → soft → hard → legal) | динамич. |
+
+**Pre-Collection:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| PreCollectionAlert | Алерты раннего предупреждения (скоро платёж, пропущен, высокий риск) | динамич. |
+
+**Soft Collection:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| CommunicationTask | Задачи на коммуникацию (первичный звонок, повторный, SMS, email, письмо) | динамич. |
+| CallScript | Скрипты звонков по стадиям и психотипам | ~20 |
+| Promise | Обещания клиента о платеже (pending → kept / broken / extended) | динамич. |
+
+**Hard Collection:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| FieldVisit | Выездные мероприятия (по месту жительства/работы/к поручителю) | динамич. |
+
+**Legal Collection:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| LegalCase | Судебное дело (досуд. претензия → иск → решение → ИП) | динамич. |
+| LegalDocument | Юридические документы (претензия, иск, ходатайство, исп. лист) | динамич. |
+
+**Реструктуризация:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| RestructuringRequest | Запрос на реструктуризацию с PD/LGD-оценкой | динамич. |
+
+**Workflow Engine:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| WorkflowRule | Правила автоматических переходов (conditions → actions JSON) | ~10 |
+| ScheduledAction | Запланированные действия (send_sms, escalate, check_promise...) | динамич. |
+
+**Killer Features (ML + аналитика):**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| ClientBehaviorProfile | Психотип клиента 360° (платёжная дисциплина, триггеры риска, каналы) | до 5000 |
+| NextBestAction | NBA-рекомендации (когда/как/что предложить) | динамич. |
+| SmartScript | Самообучающиеся скрипты с процентом успеха | ~30 |
+| ConversationAnalysis | Анализ разговора (sentiment, эффективные фразы, комплаенс) | динамич. |
+| ComplianceAlert | Алерты нарушений комплаенса (давление, угрозы, время, частота) | динамич. |
+| ReturnForecast | Прогноз возврата долга (вероятность, NPV, рекомендация) | динамич. |
+
+**Скоринг и ML:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| ScoringResult | Результат скоринга (балл 300-850, грейд A-E, ожидаемый возврат) | ~2000 |
+| TrainingData | Обучающая выборка для модели просрочки (28 признаков + y) | ~700 |
+| CreditApplication | Расширенная анкета заёмщика (10 разделов, 60+ полей) | динамич. |
+| MLModelVersion | Версионирование ML-моделей (метрики, ROC-кривая, гиперпараметры) | ~10 |
+
+**Compliance 230-ФЗ:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| ViolationLog | Журнал нарушений 230-ФЗ (11 статей, severity, блокировка) | динамич. |
+| BankruptcyCheck | Проверка банкротства клиента (ЕФРСБ) | динамич. |
+
+**Статистика:**
+
+| Модель | Описание | Записей |
+|--------|----------|---------|
+| OperatorStatistics | Витрина данных: звонки, контакты, обещания, собрано по периодам | динамич. |
+
+#### 5.2.10 CollectionCase (Кейс взыскания)
+
+```python
+class CollectionCase(models.Model):
+    """Центральная сущность для управления процессом collection"""
+    
+    client = models.ForeignKey(Client)                 # Клиент
+    credits = models.ManyToManyField(Credit)           # Кредиты (M2M)
+    assigned_operator = models.ForeignKey(Operator)    # Назначенный оператор
+    
+    # Стадия взыскания
+    stage = models.CharField(max_length=30)            # pre_collection → soft_early → soft_late → hard → legal_*
+    priority = models.IntegerField()                   # Приоритет (1-6)
+    priority_score = models.FloatField()               # Скоринг приоритета (0-100)
+    
+    # Суммы
+    total_debt = models.DecimalField()                 # Общий долг
+    overdue_amount = models.DecimalField()             # Просроченная сумма
+    penalties = models.DecimalField()                  # Штрафы и пени
+    overdue_days = models.IntegerField()               # Дней просрочки
+    
+    # ML-прогнозы
+    return_probability = models.FloatField()           # Вероятность возврата
+    predicted_return_amount = models.DecimalField()    # Прогноз суммы возврата
+    risk_segment = models.CharField()                  # Риск-сегмент
+    
+    # Счётчики
+    total_contacts = models.IntegerField()             # Всего контактов
+    successful_contacts = models.IntegerField()        # Успешных контактов
+    promises_count = models.IntegerField()             # Количество обещаний
+    broken_promises = models.IntegerField()            # Нарушенных обещаний
+    
+    # Психотип и стратегия
+    psychotype = models.CharField()                    # Психотип
+    recommended_strategy = models.CharField()          # Рекомендованная стратегия
+```
+
+**Стадии Collection Case:**
+
+| Стадия | DPD | Описание |
+|--------|-----|----------|
+| `pre_collection` | -7 to 0 | Раннее предупреждение |
+| `soft_early` | 1-30 | Мягкое взыскание (ранняя) |
+| `soft_late` | 31-60 | Мягкое взыскание (поздняя) |
+| `hard` | 61-90 | Жёсткое взыскание |
+| `legal_pretrial` | 91-120 | Досудебная претензия |
+| `legal_court` | 121+ | Судебное производство |
+| `legal_execution` | 121+ | Исполнительное производство |
+| `restructured` | any | Реструктуризация |
+| `settled` | — | Урегулировано |
+| `sold` / `written_off` | — | Продано / Списано |
+
+#### 5.2.11 ClientBehaviorProfile (Поведенческий профиль клиента)
+
+```python
+class ClientBehaviorProfile(models.Model):
+    """Психотип клиента и поведенческий профиль (360° портрет)"""
+    
+    client = models.OneToOneField(Client)              # 1:1 с клиентом
+    
+    psychotype = models.CharField()                    # Психотип
+    psychotype_confidence = models.FloatField()        # Уверенность (0-1)
+    
+    # Платёжная дисциплина
+    payment_discipline_score = models.FloatField()     # Оценка (0-1)
+    avg_days_overdue = models.FloatField()             # Средняя просрочка
+    payments_on_time_ratio = models.FloatField()       # Доля вовремя (0-1)
+    
+    # Оптимальное время контакта
+    best_contact_hour = models.IntegerField()          # Лучший час (0-23)
+    best_contact_day = models.IntegerField()           # Лучший день (0=Пн)
+    preferred_channel = models.CharField()             # Предпочтительный канал
+    
+    # Триггеры риска
+    job_changed_recently = models.BooleanField()       # Смена работы
+    income_dropped = models.BooleanField()             # Падение дохода
+    activity_dropped = models.BooleanField()           # Падение активности
+    multiple_credits = models.BooleanField()           # Много кредитов
+    
+    # Прогноз возврата
+    return_probability = models.FloatField()           # Вероятность (0-1)
+    expected_return_days = models.IntegerField()       # Ожидаемый срок (дней)
+    strategic_recommendation = models.CharField()      # Рекомендация (continue/restructure/legal/sell/write_off)
+```
+
+**Психотипы:**
+
+| Код | Описание | Стратегия |
+|-----|----------|-----------|
+| `forgetful` | Забыл / Прокрастинирует | Мягкое напоминание, SMS |
+| `unwilling` | Может платить, но не хочет | Жёсткое требование, последствия |
+| `unable` | Хочет, но не может | Реструктуризация, эмпатия |
+| `toxic` | Токсичный / Конфликтный | Только письменные каналы |
+| `cooperative` | Готов к диалогу | Стандартный подход |
+
+#### 5.2.12 ViolationLog (Нарушения 230-ФЗ)
+
+```python
+class ViolationLog(models.Model):
+    """Журнал нарушений 230-ФЗ — аудит комплаенса"""
+    
+    client = models.ForeignKey(Client)                 # Клиент
+    operator = models.ForeignKey(Operator)             # Оператор
+    rule_type = models.CharField()                     # Тип нарушения (11 статей)
+    severity = models.CharField()                      # Серьёзность (low/medium/high/critical)
+    description = models.TextField()                   # Описание
+    action_blocked = models.BooleanField()             # Действие заблокировано
+    contact_type = models.CharField()                  # Канал контакта
+    details = models.JSONField()                       # Подробности (JSON)
+```
+
+**Типы нарушений (по статьям 230-ФЗ):**
+
+| Код | Статья | Описание |
+|-----|--------|----------|
+| `st1_time` | Ст.1 | Нарушение времени контакта |
+| `st2_frequency` | Ст.2 | Превышение частоты контактов |
+| `st3_refusal` | Ст.3 | Контакт при отказе клиента |
+| `st4_third_party` | Ст.4 | Контакт с третьими лицами без согласия |
+| `st5_script` | Ст.5 | Неутверждённый скрипт |
+| `st6_identification` | Ст.6 | Нарушение идентификации оператора |
+| `st7_bankruptcy` | Ст.7 | Контакт с банкротом |
+| `st8_hidden_number` | Ст.8 | Скрытый номер звонящего |
+| `st9_interval` | Ст.9 | Нарушение минимального интервала (4 часа) |
+| `st10_history` | Ст.10 | Нарушение хранения истории |
+| `st11_personal_data` | Ст.11 | Нарушение 152-ФЗ ПДн |
+
+#### 5.2.13 ScoringResult (Результат скоринга)
+
+```python
+class ScoringResult(models.Model):
+    """Результат скоринга (2000 записей)"""
+    
+    client = models.ForeignKey(Client)                 # Клиент
+    credit = models.ForeignKey(Credit)                 # Кредит
+    calculation_date = models.DateField()              # Дата расчёта
+    probability = models.FloatField()                  # Вероятность дефолта (PD)
+    risk_segment = models.CharField()                  # Сегмент (low/medium/high/critical)
+    
+    # Расширенный скоринг
+    score_value = models.IntegerField()                # Скоринговый балл (300-850)
+    model_version = models.CharField()                 # Версия модели
+    model_type = models.CharField()                    # Тип алгоритма
+    roc_auc = models.FloatField()                      # ROC-AUC модели
+    grade = models.CharField()                         # Грейд (A-E)
+    
+    # Экономическая модель
+    expected_recovery = models.DecimalField()           # Ожидаемый возврат (₽)
+    cost_per_contact = models.DecimalField()            # Стоимость контакта (₽)
+    expected_profit = models.DecimalField()             # Ожидаемая прибыль (₽)
+```
+
+#### 5.2.14 CreditApplication (Заявка на кредит)
+
+Расширенная анкета заёмщика на основе типовой банковской анкеты (60+ полей):
+
+| Раздел | Поля | Описание |
+|--------|------|----------|
+| 1. Персональные данные | ФИО, дата/место рождения, пол, паспорт, ИНН, СНИЛС | Идентификация |
+| 2. Контакты | Телефоны, email, адрес регистрации, адрес проживания | Связь |
+| 3. Семья | Семейное положение, супруг(а), иждивенцы | Социальный профиль |
+| 4. Образование | Уровень образования (среднее → учёная степень) | Квалификация |
+| 5. Занятость | Тип, работодатель, отрасль, должность, стаж | Стабильность |
+| 6. Доходы/расходы | 5 видов дохода, 5 видов расходов, текущие кредиты | Платёжеспособность |
+| 7. Имущество | Недвижимость, авто, вклады | Обеспечение |
+| 8. Кредитная история | Просрочки, банкротство, суд. взыскания | Кредитоспособность |
+| 9. Параметры кредита | Цель, сумма, срок, залог, поручитель | Запрос |
+| 10. Результаты | approved_probability, decision, decision_comment | ML-скоринг |
+
+**Вычисляемые свойства (properties):**
+- `total_income` — сумма всех видов дохода
+- `total_expenses` — сумма всех расходов + платежи по кредитам
+- `debt_to_income_ratio` — DTI = (ежемесячный платёж + расходы) / доход
+
+#### 5.2.15 MLModelVersion (Версионирование ML-моделей)
+
+```python
+class MLModelVersion(models.Model):
+    """Версионирование ML-моделей"""
+    
+    name = models.CharField()                          # Название модели
+    version = models.CharField()                       # Версия
+    model_type = models.CharField()                    # Тип алгоритма (RF, GB, LR)
+    
+    # Метрики качества
+    accuracy = models.FloatField()                     # Accuracy
+    precision = models.FloatField()                    # Precision
+    recall = models.FloatField()                       # Recall
+    f1_score = models.FloatField()                     # F1-Score
+    roc_auc = models.FloatField()                      # ROC-AUC
+    cv_mean = models.FloatField()                      # CV Mean
+    cv_std = models.FloatField()                       # CV Std
+    
+    # Параметры
+    hyperparameters = models.JSONField()               # Гиперпараметры (JSON)
+    feature_names = models.JSONField()                 # Признаки
+    feature_importances = models.JSONField()           # Важность признаков
+    confusion_matrix = models.JSONField()              # Матрица ошибок
+    roc_curve_fpr = models.JSONField()                 # ROC FPR (точки)
+    roc_curve_tpr = models.JSONField()                 # ROC TPR (точки)
+    
+    training_data_size = models.IntegerField()         # Размер выборки
+    is_active = models.BooleanField()                  # Активная модель
+    model_path = models.CharField()                    # Путь к файлу
+```
 
 #### 5.3.1 Объёмы данных
 
@@ -549,6 +928,14 @@ class Operator(models.Model):
 | Intervention | 10 000 | Воздействия по кредитам |
 | Operator | 50 | Операторы (ID 51-100) |
 | Assignment | 3 000 | Назначения на текущий день |
+| ScoringResult | ~2 000 | Результаты скоринга (балл + грейд) |
+| TrainingData | ~700 | Обучающая выборка (28 признаков) |
+| CreditApplication | динамич. | Расширенные заявки (60+ полей) |
+| ClientBehaviorProfile | до 5 000 | Поведенческие профили (1:1 с Client) |
+| CollectionCase | динамич. | Кейсы взыскания (полный цикл) |
+| ViolationLog | динамич. | Нарушения 230-ФЗ (аудит) |
+| MLModelVersion | ~10 | Версии ML-моделей с метриками |
+| OperatorStatistics | динамич. | Статистика операторов по периодам |
 
 #### 5.3.2 Процентные ставки по типам продуктов
 
@@ -649,6 +1036,8 @@ class Operator(models.Model):
   "planned_close_date": "2027-03-15",
   "actuality_date": "2026-03-01",
   "term_months": 36,
+  "delinquency_bucket": "30-60",
+  "days_past_due": 42,
   "latest_state": {
     "id": 123,
     "state_date": "2026-03-01",
@@ -661,7 +1050,7 @@ class Operator(models.Model):
 }
 ```
 
-> **Примечание:** Поля `client_name`, `client_phone`, `term_months` и `latest_state` вычисляются в сериализаторе и не хранятся в модели.
+> **Примечание:** Поля `client_name`, `client_phone`, `term_months`, `delinquency_bucket`, `days_past_due` и `latest_state` вычисляются в сериализаторе и не хранятся в модели.
 
 #### 6.2.3 Состояния кредитов
 
@@ -731,14 +1120,46 @@ class Operator(models.Model):
 }
 ```
 
-#### 6.2.7 Скоринг
+#### 6.2.7 Нарушения 230-ФЗ (ViolationLog)
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/violations/` | Список нарушений (последние 200) |
+| GET | `/api/violations/?client_id={id}` | Нарушения по клиенту |
+| GET | `/api/violations/?operator_id={id}` | Нарушения по оператору |
+| GET | `/api/violations/?rule_type=st1_time` | Фильтр по типу нарушения |
+| GET | `/api/violations/?severity=critical` | Фильтр по серьёзности |
+
+**Пример ответа GET /api/violations/:**
+```json
+[
+  {
+    "id": 1,
+    "client": 42,
+    "client_name": "Петров П.П.",
+    "operator": 3,
+    "operator_name": "Иванов И.И.",
+    "rule_type": "st1_time",
+    "rule_type_display": "Ст.1 Нарушение времени контакта",
+    "severity": "high",
+    "severity_display": "Высокая",
+    "description": "Ст.1: Звонок в нерабочее время",
+    "action_blocked": true,
+    "contact_type": "phone",
+    "details": {},
+    "created_at": "2026-03-10T23:15:00Z"
+  }
+]
+```
+
+#### 6.2.8 Скоринг
 
 | Метод | URL | Описание |
 |-------|-----|----------|
 | GET | `/api/scorings/` | Результаты скоринга |
 | GET | `/api/scorings/?credit={id}` | Скоринг кредита |
 
-#### 6.2.8 Операторы
+#### 6.2.9 Операторы
 
 | Метод | URL | Описание |
 |-------|-----|----------|
@@ -746,7 +1167,7 @@ class Operator(models.Model):
 | GET | `/api/operators/{id}/` | Детали оператора |
 | GET | `/api/operators/{id}/queue/` | Очередь оператора |
 
-#### 6.2.9 Назначения
+#### 6.2.10 Назначения
 
 | Метод | URL | Описание |
 |-------|-----|----------|
@@ -756,6 +1177,187 @@ class Operator(models.Model):
 | POST | `/api/assignments/distribute/` | Запустить распределение |
 
 > Сортировка по умолчанию: `-priority, -overdue_amount`. Сериализатор дополняет каждое назначение полями: `operator_name`, `client_name`, `client_phone`, `client_id`, `last_promise_amount`, `last_promise_date`, `total_attempts`.
+
+#### 6.2.11 Поведенческие профили
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/profiles/` | Список поведенческих профилей |
+| GET | `/api/profiles/{id}/` | Детали профиля |
+| POST | `/api/profiles/{id}/analyze_client/` | Запустить ML-анализ психотипа |
+
+#### 6.2.12 Next Best Action (NBA)
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/nba/` | Список рекомендаций |
+| GET | `/api/nba/?client={id}` | NBA для клиента |
+| POST | `/api/nba/{id}/execute/` | Отметить рекомендацию выполненной |
+| POST | `/api/nba/{id}/skip/` | Пропустить рекомендацию |
+
+#### 6.2.13 Smart-скрипты
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/scripts/` | Список скриптов |
+| GET | `/api/scripts/for_context/` | Скрипты для контекста (психотип, сценарий) |
+
+#### 6.2.14 Compliance-алерты
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/compliance-alerts/` | Список алертов |
+| POST | `/api/compliance-alerts/{id}/resolve/` | Закрыть алерт с комментарием |
+
+#### 6.2.15 Прогнозы возврата
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/forecasts/` | Список прогнозов |
+| GET | `/api/forecasts/?credit={id}` | Прогноз по кредиту |
+
+#### 6.2.16 Дашборд и аналитика
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/dashboard/` | Полный дашборд (operator_stats, daily_calls, hourly, call_results) |
+| GET | `/api/dashboard/stats/` | Сводная статистика (клиенты, кредиты, платежи, каналы, NBA) |
+| GET | `/api/dashboard/operator/` | Статистика текущего оператора |
+| GET | `/api/dashboard/operator/{id}/` | Статистика конкретного оператора |
+
+**Параметры запроса дашборда:**
+
+| Параметр | Описание | Значения |
+|----------|----------|----------|
+| period | Период агрегации | `day`, `week`, `month` |
+| operator_id | ID оператора | число |
+
+**Пример ответа GET /api/dashboard/operator/51/:**
+```json
+{
+  "today": {
+    "calls_total": 42,
+    "successful_contacts": 28,
+    "contact_rate": 66.7,
+    "promises_count": 8,
+    "promise_amount": 245000,
+    "avg_duration": 185
+  },
+  "daily_dynamics": [...],
+  "hourly_activity": [...],
+  "top_promises": [...]
+}
+```
+
+#### 6.2.17 Прогнозирование просрочки
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/overdue-prediction/?credit_id={id}` | Прогноз для одного кредита |
+| GET | `/api/overdue-prediction/?client_id={id}` | Прогноз для всех кредитов клиента |
+| POST | `/api/overdue-prediction/` | Пакетный прогноз с ранжированием |
+
+**Пример ответа:**
+```json
+{
+  "credit_id": 123,
+  "client_name": "Иванов И.П.",
+  "risk_category": "high",
+  "risk_probability": 0.82,
+  "risk_factors": [
+    {"factor": "overdue_share_12m", "value": 0.45, "impact": "high"},
+    {"factor": "max_overdue_days", "value": 67, "impact": "high"}
+  ],
+  "features": {...}
+}
+```
+
+#### 6.2.18 Обучение ML-моделей
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| POST | `/api/ml/train-overdue/` | Обучить модель прогноза просрочки (RF, 26 признаков) |
+| POST | `/api/ml/train-approval/` | Обучить модель одобрения заявок (GB, 31 признак) |
+| GET | `/api/ml/models/` | Список версий ML-моделей |
+| GET | `/api/ml/models/?active=true` | Только активные модели |
+| GET | `/api/ml/models/{id}/` | Детали конкретной модели |
+
+**Пример ответа POST /api/ml/train-overdue/:**
+```json
+{
+  "status": "success",
+  "model_type": "RandomForestClassifier",
+  "accuracy": 0.78,
+  "cv_mean": 0.75,
+  "cv_std": 0.03,
+  "feature_importances": {
+    "max_overdue_days": 0.15,
+    "overdue_share_12m": 0.12,
+    "lti_ratio": 0.10
+  }
+}
+```
+
+#### 6.2.19 Скоринг дашборд
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/scoring/dashboard/` | Визуализация скоринга (грейды, гистограмма, прибыль) |
+
+#### 6.2.20 Compliance 230-ФЗ
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/compliance/check/?client_id={id}&contact_type={type}` | Проверить можно ли связаться с клиентом |
+| GET/POST | `/api/compliance/bankruptcy/?client_id={id}` | Проверить/зарегистрировать банкротство |
+| GET | `/api/compliance/summary/` | Сводка комплаенса (заблокировано, проверки, рейт) |
+| GET | `/api/violations/` | Журнал нарушений 230-ФЗ |
+
+**Пример ответа GET /api/compliance/check/?client_id=1&contact_type=phone:**
+```json
+{
+  "allowed": false,
+  "violations": [
+    {"rule": "st2_frequency", "description": "Превышен лимит звонков (1/день)"},
+    {"rule": "st1_time", "description": "Звонки запрещены в это время"}
+  ],
+  "limits": {
+    "calls_today": 1,
+    "calls_this_week": 2,
+    "max_calls_per_day": 1,
+    "max_calls_per_week": 2
+  }
+}
+```
+
+#### 6.2.21 A/B тестирование и распределение
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/ab-test/results/` | Сравнение группы A (случайное) vs B (умное) |
+| POST | `/api/distribution/run/` | Запуск интеллектуального распределения |
+
+#### 6.2.22 Аудит
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/audit/` | Журнал аудита (фильтры: action, severity, operator_id, client_id) |
+
+#### 6.2.23 Ежедневные состояния кредитов
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/credit-daily-states/?credit_id={id}` | Интерполированные ежедневные состояния из помесячных CreditState |
+
+#### 6.2.24 Документация API (OpenAPI / Swagger)
+
+| URL | Описание |
+|-----|----------|
+| `/api/docs/` | Swagger UI — интерактивная документация |
+| `/api/redoc/` | ReDoc — альтернативная документация |
+| `/api/schema/` | OpenAPI 3.0 JSON-схема |
+
+> Автодокументация реализована с помощью **drf-spectacular**. Все эндпоинты, сериализаторы и параметры автоматически попадают в схему.
 
 ### 6.3 Коды ошибок
 
@@ -1933,12 +2535,27 @@ server {
 ```
 backend/
 ├── collection_app/
-│   └── tests.py           # Unit тесты
+│   └── tests.py           # Unit / Integration тесты (37 тестов, 10 классов)
 ├── test_api_prediction.py # API тесты
 └── test_loan_predictor.py # ML тесты
 ```
 
-### 11.2 Запуск тестов
+### 11.2 Обзор тестовых классов
+
+| Класс | Тестов | Область покрытия |
+|-------|--------|------------------|
+| `ClientModelTest` | 3 | Создание клиента, дефолты `contact_refused` / `is_bankrupt` |
+| `CreditModelTest` | 7 | Создание кредита, бакеты просрочки (current, 0-30, 30-60, 60-90, 90+), `days_past_due` |
+| `ViolationLogModelTest` | 1 | Создание записи ViolationLog с дефолтами |
+| `ComplianceContactTest` | 7 | 230-ФЗ: разрешение/блокировка контактов (банкрот, отказ, канал, лимит звонков, третьи лица) |
+| `ComplianceLogTest` | 2 | Логирование нарушений в ViolationLog и AuditLog |
+| `ComplianceValidationTest` | 3 | Валидация Intervention: идентификация оператора, обязательные поля |
+| `DistributionServiceTest` | 2 | DistributionService: ранжирование по опыту, инстанцирование |
+| `BankruptcyTest` | 3 | Проверка банкротства: сервис, блокировка/разрешение контакта |
+| `APIEndpointTest` | 8 | REST API: clients, credits, compliance/check, violations, scoring, operators, swagger |
+| `DelinquencyBucketAPITest` | 1 | `delinquency_bucket` в ответе `/api/credits/` |
+
+### 11.3 Запуск тестов
 
 ```bash
 # Все тесты
@@ -1947,13 +2564,16 @@ python manage.py test
 # Конкретный файл
 python manage.py test collection_app.tests
 
+# Подробный вывод
+python manage.py test collection_app.tests -v 2
+
 # С покрытием
 pip install coverage
 coverage run manage.py test
 coverage report
 ```
 
-### 11.3 Примеры тестов
+### 11.4 Примеры тестов
 
 ```python
 # tests.py
@@ -1986,7 +2606,7 @@ class CreditModelTest(TestCase):
         pass
 ```
 
-### 11.4 API тесты
+### 11.5 API тесты
 
 ```python
 # test_api_prediction.py
@@ -2288,9 +2908,61 @@ actions = {
 
 ---
 
-## 14. Roadmap развития
+## 14. Комплаенс 230-ФЗ
 
-### 14.1 Текущий статус (v3.0)
+### 14.1 Обзор
+
+Система реализует проверку соответствия требованиям **Федерального закона № 230-ФЗ** «О защите прав и законных интересов физических лиц при осуществлении деятельности по возврату просроченной задолженности».
+
+**Файл:** `backend/collection_app/services/compliance_230fz.py`
+
+### 14.2 Проверки при контакте (`can_contact`)
+
+При каждом контакте с клиентом система автоматически проверяет:
+
+| # | Проверка | Статья | Описание |
+|---|----------|--------|----------|
+| 1 | Банкротство | Ст. 7 | Контакт с банкротом запрещён |
+| 2 | Отказ от взаимодействия | Ст. 3 | Клиент отказался от контактов (`contact_refused = True`) |
+| 3 | Отказ по каналу | Ст. 3 | Отказ от конкретного канала связи (`refused_channels`) |
+| 4 | Время контакта | Ст. 1 | Будни: 8:00–22:00, выходные: 9:00–20:00 |
+| 5 | Частота звонков | Ст. 2 | Не более 2 телефонных звонков в сутки |
+| 6 | Третьи лица | Ст. 4 | Контакт с третьими лицами только при наличии согласия |
+
+### 14.3 Журнал нарушений (ViolationLog)
+
+При блокировке контакта система автоматически фиксирует нарушение:
+
+```
+can_contact() → violations[] → log_compliance_violation()
+                                      │
+                           ┌──────────┴──────────┐
+                           │                     │
+                      ViolationLog          AuditLog
+                   (отдельная таблица)    (общий лог)
+```
+
+Каждое нарушение записывается в модель **ViolationLog** с привязкой к:
+- Клиенту (client)
+- Оператору (operator)
+- Типу нарушения по статье закона (rule_type: st1..st11)
+- Уровню серьёзности (severity: low/medium/high/critical)
+- Каналу контакта (contact_type)
+
+### 14.4 API
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/compliance/check/?client_id=123&type=phone` | Проверка допустимости контакта |
+| GET | `/api/compliance/bankruptcy/?client_id=123` | Проверка банкротства |
+| POST | `/api/compliance/bankruptcy/` | Регистрация банкротства |
+| GET | `/api/violations/` | Журнал нарушений с фильтрами |
+
+---
+
+## 15. Roadmap развития
+
+### 15.1 Текущий статус (v3.1)
 
 | Компонент | Статус | Описание |
 |-----------|--------|----------|
@@ -2302,12 +2974,15 @@ actions = {
 | Данные | ✅ Качество | ~21k CreditState, ~19k Payments, ставки по продуктам |
 | Рабочий стол оператора | ✅ Реализован | Персональная очередь, декомпозиция долга, навигация |
 | Client 360° | ✅ Реализован | Реальные API, NBA, история воздействий |
-| Бизнес-логика | ⚠️ 80% | Базовые процессы + рабочее место оператора |
+| Комплаенс 230-ФЗ | ✅ Реализован | ViolationLog, проверки, банкротство |
+| DPD бакеты | ✅ Реализованы | delinquency_bucket / days_past_due в Credit |
+| API документация | ✅ Swagger / ReDoc | drf-spectacular, OpenAPI 3.0 |
+| Тесты | ✅ 37 тестов | 10 классов: модели, комплаенс, API, распределение |
+| Бизнес-логика | ⚙️ 80% | Базовые процессы + рабочее место оператора |
 | Интеграции | ❌ Нет | SMS, CTI, БКИ — заглушки |
 | CI/CD | ❌ Нет | Требуется настройка |
-| Тесты | ⚠️ Минимальные | Нужно расширение |
 
-### 14.2 Версия 2.1 (Q2 2026)
+### 15.2 Версия 2.1 (Q2 2026)
 
 **Фокус: Интеграции и автоматизация**
 
@@ -2318,7 +2993,7 @@ actions = {
 - [ ] Scheduler для автоматических задач
 - [ ] Webhook для внешних событий
 
-### 14.3 Версия 2.2 (Q3 2026)
+### 15.3 Версия 2.2 (Q3 2026)
 
 **Фокус: ML и аналитика**
 
@@ -2329,7 +3004,7 @@ actions = {
 - [ ] Автоматическое переобучение
 - [ ] Explainable AI (SHAP values)
 
-### 14.4 Версия 3.0 (Q4 2026)
+### 15.4 Версия 3.0 (Q4 2026)
 
 **Фокус: Enterprise-ready**
 
@@ -2341,7 +3016,7 @@ actions = {
 - [ ] High Availability (HA) кластер
 - [ ] Multi-tenant архитектура
 
-### 14.5 Архитектура будущего (Target)
+### 15.5 Архитектура будущего (Target)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
@@ -2395,7 +3070,7 @@ actions = {
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 14.6 Оценка текущей готовности
+### 15.6 Оценка текущей готовности
 
 | Критерий | Текущий проект | Требования для банка | Gap |
 |----------|----------------|---------------------|-----|
@@ -2484,6 +3159,7 @@ actions = {
 | 1.0.0 | 2026-02-05 | Начальная версия документации |
 | 2.0.0 | 2026-02-05 | Полный цикл Collection, RBAC, Workflow Engine, Security Middleware, BPMN, Roadmap |
 | 3.0.0 | 2026-03-15 | Обновление модели данных: Intervention вместо Interaction, CreditState с помесячной прогрессией (~21k записей), Payment с реалистичным жизненным циклом (~19k записей). Вычисляемые поля: term_months, latest_state, client_name, client_phone в CreditSerializer. Фильтры API: PaymentViewSet (?credit, ?client), CreditStateViewSet (?credit, ?client), AssignmentViewSet (?operator_id). Рабочий стол оператора: персональная очередь через Assignment, декомпозиция долга. Client360 — работа с реальными API вместо mock-данных. Процентные ставки по типам продуктов, аннуитетные платежи. |
+| 3.1.0 | 2026-03-11 | Бакеты просрочки (DPD): свойства `delinquency_bucket` и `days_past_due` в Credit. Модель ViolationLog для аудита нарушений 230-ФЗ (12 типов нарушений, 4 уровня серьёзности, 4 индекса). API эндпоинт `/api/violations/` с фильтрами. Автодокументация API: drf-spectacular (Swagger `/api/docs/`, ReDoc `/api/redoc/`, OpenAPI схема `/api/schema/`). Комплексное тестирование: 37 тестов в 10 классах (модели, комплаенс, API, распределение, банкротство). |
 
 ---
 
