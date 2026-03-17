@@ -48,7 +48,29 @@ const getUrgencyLabel = (u) => {
   return labels[u] || '';
 };
 
-export default function CollectionDeskApp({ user, onClient360, onCreditClick }) {
+// Pre-overdue reminder script phrases
+const PRE_OVERDUE_SCRIPT = {
+  opening: [
+    'Здравствуйте! Меня зовут {operator}. Звоню вам из компании по вопросу вашего кредита.',
+    'Добрый день, {client}! Звоню напомнить о предстоящем платеже.',
+  ],
+  reminder: [
+    'У вас плановый платёж {amount} назначен на {date}.',
+    'Напоминаю, что {date} подходит срок очередного платежа в размере {amount}.',
+    'До платежа осталось {days_left} дн. Убедительная просьба не пропустить срок.',
+  ],
+  benefits: [
+    'Своевременная оплата помогает сохранить хорошую кредитную историю.',
+    'Если возникнут сложности. мы можем рассмотреть варианты реструктуризации.',
+    'При просрочке начисляются пени — лучше оплатить вовремя.',
+  ],
+  closing: [
+    'Спасибо за внимание! Хорошего дня.',
+    'Будем рады, если оплата поступит вовремя. До свидания!',
+  ],
+};
+
+export default function CollectionDeskApp({ user, onClient360, onCreditClick, preOverdueContext, onClearPreOverdue }) {
   const [queue, setQueue] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [history, setHistory] = useState([]);
@@ -70,6 +92,33 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
   const callTimerRef = useRef(null);
 
   const isManager = user && (user.role === 'manager' || user.role === 'supervisor' || user.role === 'admin');
+
+  // Pre-overdue: inject client into queue and auto-select
+  useEffect(() => {
+    if (!preOverdueContext) return;
+    const ctx = preOverdueContext;
+    const fakeClient = {
+      id: ctx.client_id,
+      clientId: ctx.client_id,
+      name: ctx.client_name,
+      mainPhone: ctx.client_phone || '',
+      outstanding: ctx.total_debt || 0,
+      daysPastDue: ctx.overdue_days || 0,
+      lastContact: null,
+      attempts: 0,
+      credits: [],
+      creditId: ctx.credit_id,
+      workedToday: false,
+      todayCount: 0,
+      _preOverdue: true,
+    };
+    setQueue(q => {
+      const exists = q.find(d => d.id === ctx.client_id);
+      if (exists) return q;
+      return [fakeClient, ...q];
+    });
+    setSelectedId(ctx.client_id);
+  }, [preOverdueContext]);
 
   // Загрузка очереди должников из БД
   const loadQueue = useCallback(async () => {
@@ -407,18 +456,18 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
           {/* === Вкладки === */}
           <div style={{display:'flex',borderBottom:'1px solid #30363d',marginBottom:0}}>
             <div style={tabStyle(sidebarTab === 'pending')} onClick={() => setSidebarTab('pending')}>
-              📋 К отработке ({pendingVisible.length})
+               К отработке ({pendingVisible.length})
             </div>
             <div style={tabStyle(sidebarTab === 'worked')} onClick={() => setSidebarTab('worked')}>
-              ✅ Отработаны ({workedVisible.length})
+               Отработаны ({workedVisible.length})
             </div>
           </div>
           <div className="clients-list">
-            {loadingQueue && <div className="muted" style={{padding:16,textAlign:'center'}}>⏳ Загрузка клиентов из БД...</div>}
+            {loadingQueue && <div className="muted" style={{padding:16,textAlign:'center'}}> Загрузка клиентов из БД...</div>}
 
             {/* === Вкладка: К отработке === */}
             {sidebarTab === 'pending' && !loadingQueue && pendingVisible.length === 0 && (
-              <div className="muted" style={{padding:16,textAlign:'center'}}>🎉 Все клиенты отработаны!</div>
+              <div className="muted" style={{padding:16,textAlign:'center'}}> Все клиенты отработаны!</div>
             )}
             {sidebarTab === 'pending' && pendingVisible.map(d => (
               <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
@@ -493,14 +542,14 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                     {selected.mlRiskScore !== undefined && <div style={{fontSize:10, color:'#a3a3a3', marginTop:2}}>ML-прогноз</div>}
                   </div>
                   <button className="btn small ghost" style={{marginTop:8}} onClick={() => onClient360 && onClient360(selected.clientId)}>
-                    👤 360° профиль
+                     360° профиль
                   </button>
                   {creditDetails.length > 0 && (
                     <div style={{marginTop:8}}>
                       {creditDetails.map(c => (
                         <button key={c.id} className="btn small ghost" style={{marginTop:4,fontSize:12,display:'block',width:'100%',textAlign:'left'}}
                           onClick={() => onCreditClick && onCreditClick(c.id)}>
-                          💳 Договор #{c.id}
+                           Договор #{c.id}
                         </button>
                       ))}
                     </div>
@@ -520,17 +569,17 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                 {selectedHistory.map(h => (
                   <div key={h.id} className="history-item">
                     <div>{(h.channel || 'phone').toUpperCase()} — {relativeDate(h.at)} — <strong>{
-                      h.result === 'promise' ? '💰 Обещание' :
-                      h.result === 'refuse' ? '❌ Отказ' :
-                      h.result === 'no_answer' ? '📵 Не дозвон' :
-                      h.result === 'completed' ? '✅ Завершено' :
-                      h.result === 'callback' ? '🔄 Перезвонить' : h.result
+                      h.result === 'promise' ? ' Обещание' :
+                      h.result === 'refuse' ? ' Отказ' :
+                      h.result === 'no_answer' ? ' Не дозвон' :
+                      h.result === 'completed' ? ' Завершено' :
+                      h.result === 'callback' ? ' Перезвонить' : h.result
                     }</strong>
                     {h.duration > 0 && <span className="muted"> ({Math.floor(h.duration/60)}м {h.duration%60}с)</span>}
                     </div>
                     {h.result === 'promise' && h.promiseAmount > 0 && (
                       <div style={{color:'#16a34a',fontSize:13,marginTop:2}}>
-                        💵 Обещание: {formatCurrency(h.promiseAmount)}{h.promiseDate && ` к ${h.promiseDate}`}
+                         Обещание: {formatCurrency(h.promiseAmount)}{h.promiseDate && ` к ${h.promiseDate}`}
                       </div>
                     )}
                     {h.result === 'refuse' && h.refusalReason && (
@@ -546,12 +595,43 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
 
         <aside className="right-col">
           <div className="cti-card">
-            <div className="cti-row"><strong>CTI статус:</strong> <span className="cti-status">{isCalling ? '🟢 На звонке' : '⚪ Готов'}</span></div>
+            <div className="cti-row"><strong>CTI статус:</strong> <span className="cti-status">{isCalling ? ' На звонке' : ' Готов'}</span></div>
             <div className="cti-row"><div className="muted">Таймер:</div><div className="timer">{getCallDuration()}</div></div>
             
-            {/* Copilot Suggestions */}
+            {/* Copilot Suggestions / Pre-overdue Script */}
+            {preOverdueContext && selected?.id === preOverdueContext.client_id ? (
+              <div style={{background:'rgba(56,139,253,0.15)',border:'1px solid rgba(56,139,253,0.5)',borderRadius:8,padding:10,marginBottom:10}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#58a6ff',marginBottom:6}}>📄 Инструкция: напоминание о платеже</div>
+                <div style={{fontSize:11,color:'#f0883e',fontWeight:600,marginBottom:4}}>Риск просрочки: {preOverdueContext.risk_label} ({(preOverdueContext.risk_score*100).toFixed(0)}%)</div>
+                {preOverdueContext.next_payment_date && (
+                  <div style={{fontSize:11,color:'#8b949e',marginBottom:8}}>Платёж: {Number(preOverdueContext.monthly_payment||0).toLocaleString('ru-RU')} ₽ — {new Date(preOverdueContext.next_payment_date + 'T00:00:00').toLocaleDateString('ru-RU')}{preOverdueContext.days_to_payment != null && ` (через ${preOverdueContext.days_to_payment} дн.)`}</div>
+                )}
+                {['opening','reminder','benefits','closing'].map(stage => (
+                  <div key={stage} style={{marginBottom:8}}>
+                    <div style={{fontSize:11,fontWeight:600,color:'#58a6ff',marginBottom:2}}>
+                      {stage === 'opening' ? 'Приветствие' : stage === 'reminder' ? 'Напоминание' : stage === 'benefits' ? 'Мотивация' : 'Завершение'}
+                    </div>
+                    {PRE_OVERDUE_SCRIPT[stage].map((ph, i) => {
+                      const text = ph
+                        .replace('{client}', preOverdueContext.client_name?.split(' ')[1] || preOverdueContext.client_name)
+                        .replace('{operator}', user?.full_name || user?.name || 'Оператор')
+                        .replace('{amount}', Number(preOverdueContext.monthly_payment||0).toLocaleString('ru-RU')+' ₽')
+                        .replace('{date}', preOverdueContext.next_payment_date ? new Date(preOverdueContext.next_payment_date+'T00:00:00').toLocaleDateString('ru-RU') : '')
+                        .replace('{days_left}', preOverdueContext.days_to_payment ?? '?');
+                      return (
+                        <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'3px 0',cursor:'pointer'}}
+                             onClick={() => navigator.clipboard.writeText(text)} title="Клик чтобы скопировать">
+                          → {text}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+                <button className="btn small ghost" style={{marginTop:4,fontSize:11,width:'100%'}} onClick={() => onClearPreOverdue && onClearPreOverdue()}>Вернуться к обычным подсказкам</button>
+              </div>
+            ) : (
             <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,marginBottom:10}}>
-              <div style={{fontSize:12,fontWeight:600,color:'#3fb950',marginBottom:6}}>🤖 Copilot подсказки:</div>
+              <div style={{fontSize:12,fontWeight:600,color:'#3fb950',marginBottom:6}}> Copilot подсказки:</div>
               <div style={{fontSize:11,color:'#8b949e'}}>Фразы для этого типа клиента:</div>
               {selectedCopilotPhrases.slice(0,2).map((phrase, i) => (
                 <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'4px 0',cursor:'pointer'}} 
@@ -560,6 +640,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
                 </div>
               ))}
             </div>
+            )}
             
             <div className="cti-row">
               <label>Результат звонка</label>
@@ -575,7 +656,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             {/* Поля для обещания */}
             {resultCode === 'promise_to_pay' && (
               <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#3fb950',display:'block',marginBottom:6}}>💰 Данные обещания</label>
+                <label style={{fontSize:12,fontWeight:600,color:'#3fb950',display:'block',marginBottom:6}}> Данные обещания</label>
                 <div style={{marginBottom:6}}>
                   <label style={{fontSize:12,color:'#8b949e',display:'block'}}>Сумма обещания (₽)</label>
                   <input type="number" value={promiseAmount} onChange={e=>setPromiseAmount(e.target.value)}
@@ -593,7 +674,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             {/* Поля для отказа */}
             {resultCode === 'decline' && (
               <div style={{background:'rgba(248,81,73,0.15)',border:'1px solid rgba(248,81,73,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#f85149',display:'block',marginBottom:6}}>❌ Причина отказа</label>
+                <label style={{fontSize:12,fontWeight:600,color:'#f85149',display:'block',marginBottom:6}}> Причина отказа</label>
                 <select value={refusalReason} onChange={e=>setRefusalReason(e.target.value)}
                   style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:13,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}}>
                   <option value="">— Выберите причину —</option>
@@ -603,8 +684,8 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick }) 
             )}
 
             <div className="cti-row"><label>Заметка</label><textarea value={note} onChange={e=>setNote(e.target.value)} style={{marginTop:8}} placeholder="Комментарий к звонку..." /></div>
-            <div className="cti-actions"><button className="btn" onClick={saveResult} disabled={saving}>{saving ? '⏳ Сохранение...' : 'Сохранить'}</button><button className="btn ghost" onClick={()=>setRecordingOn(r=>!r)}>{recordingOn? '⏹ Стоп запись' : '⏺ Запись'}</button></div>
-            <div className="muted" style={{marginTop:8}}>Запись разговора: {recordingOn ? '🔴 включена' : 'выключена'}</div>
+            <div className="cti-actions"><button className="btn" onClick={saveResult} disabled={saving}>{saving ? ' Сохранение...' : 'Сохранить'}</button><button className="btn ghost" onClick={()=>setRecordingOn(r=>!r)}>{recordingOn? ' Стоп запись' : ' Запись'}</button></div>
+            <div className="muted" style={{marginTop:8}}>Запись разговора: {recordingOn ? ' включена' : 'выключена'}</div>
           </div>
         </aside>
       </div>

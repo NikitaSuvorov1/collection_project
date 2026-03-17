@@ -36,15 +36,15 @@ export default function DatabaseViewPage() {
   const [useMock, setUseMock] = useState(false);
 
   const entities = [
-    { key: 'clients', name: 'Клиенты', endpoint: '/clients/', icon: '👤' },
-    { key: 'operators', name: 'Операторы', endpoint: '/operators/', icon: '🎧' },
-    { key: 'credits', name: 'Кредиты', endpoint: '/credits/', icon: '💳' },
-    { key: 'payments', name: 'Платежи', endpoint: '/payments/', icon: '💰' },
-    { key: 'interventions', name: 'Взаимодействия', endpoint: '/interventions/', icon: '📞' },
-    { key: 'applications', name: 'Заявки на кредит', endpoint: '/applications/', icon: '📝' },
-    { key: 'assignments', name: 'Назначения', endpoint: '/assignments/', icon: '📋' },
-    { key: 'scoring', name: 'Результаты скоринга', endpoint: '/scorings/', icon: '📊' },
-    { key: 'credit_states', name: 'Состояния кредитов', endpoint: '/credit-states/', icon: '📈' },
+    { key: 'clients', name: 'Клиенты', endpoint: '/clients/', icon: '' },
+    { key: 'operators', name: 'Операторы', endpoint: '/operators/', icon: '' },
+    { key: 'credits', name: 'Кредиты', endpoint: '/credits/', icon: '' },
+    { key: 'payments', name: 'Платежи', endpoint: '/payments/', icon: '' },
+    { key: 'interventions', name: 'Взаимодействия', endpoint: '/interventions/', icon: '' },
+    { key: 'applications', name: 'Заявки на кредит', endpoint: '/applications/', icon: '' },
+    { key: 'assignments', name: 'Назначения', endpoint: '/assignments/', icon: '' },
+    { key: 'scoring', name: 'Результаты скоринга', endpoint: '/scorings/', icon: '' },
+    { key: 'credit_states', name: 'Состояния кредитов', endpoint: '/credit-states/', icon: '' },
   ];
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function DatabaseViewPage() {
 
   const renderValue = (value) => {
     if (value === null || value === undefined) return <span style={styles.null}>null</span>;
-    if (typeof value === 'boolean') return value ? '✅' : '❌';
+    if (typeof value === 'boolean') return value ? '' : '';
     if (typeof value === 'object') return JSON.stringify(value);
     if (typeof value === 'number' && value > 1000) return value.toLocaleString('ru-RU');
     return String(value);
@@ -128,16 +128,16 @@ export default function DatabaseViewPage() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>🗄️ Просмотр базы данных</h1>
+        <h1 style={styles.title}> Просмотр базы данных</h1>
         <div style={styles.controls}>
           <button 
             onClick={() => setUseMock(!useMock)} 
             style={{...styles.btn, backgroundColor: useMock ? '#f59e0b' : '#3b82f6'}}
           >
-            {useMock ? '📦 Мок данные' : '🔌 API данные'}
+            {useMock ? ' Мок данные' : ' API данные'}
           </button>
           <button onClick={fetchAllData} style={styles.btn} disabled={loading}>
-            {loading ? '⏳ Загрузка...' : '🔄 Обновить'}
+            {loading ? ' Загрузка...' : ' Обновить'}
           </button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function DatabaseViewPage() {
       <div style={styles.footer}>
         <p>Показаны первые 5 записей из каждой таблицы</p>
         <p style={styles.hint}>
-          💡 Для работы API запустите: <code style={styles.code}>run_server.bat</code>
+           Для работы API запустите: <code style={styles.code}>run_server.bat</code>
         </p>
       </div>
     </div>

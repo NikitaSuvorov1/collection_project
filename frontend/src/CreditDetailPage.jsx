@@ -171,7 +171,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         date: p.payment_date,
         sortDate: new Date(p.payment_date),
         type: 'payment',
-        icon: '💰',
+        icon: '',
         label: PAYMENT_TYPE_LABELS[p.payment_type] || 'Платёж',
         description: `${formatCurrency(p.amount)}${isLate ? ` (просрочка ${p.overdue_days} дн.)` : ''}`,
           color: isLate ? '#d29922' : '#3fb950',
@@ -192,7 +192,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           date: s.state_date,
           sortDate: new Date(s.state_date),
           type: 'overdue_start',
-          icon: '🔴',
+          icon: '',
           label: 'Начало просрочки',
           description: `Просроч. ОД: ${formatCurrency(s.overdue_principal)}, DPD: ${dpd}`,
           color: '#f85149',
@@ -204,7 +204,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           date: s.state_date,
           sortDate: new Date(s.state_date),
           type: 'overdue_end',
-          icon: '🟢',
+          icon: '',
           label: 'Просрочка погашена',
           description: 'Просроченная задолженность закрыта',
           color: '#3fb950',
@@ -217,7 +217,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
           date: s.state_date,
           sortDate: new Date(s.state_date),
           type: 'penalty',
-          icon: '⚠️',
+          icon: '',
           label: 'Начисление штрафа',
           description: `Штраф: ${formatCurrency(s.penalties)}`,
           color: '#d29922',
@@ -233,7 +233,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         date: credit.open_date,
         sortDate: new Date(credit.open_date),
         type: 'open',
-        icon: '📋',
+        icon: '',
         label: 'Выдача кредита',
         description: `${PRODUCT_TYPES[credit.product_type] || credit.product_type}, ${formatCurrency(credit.principal_amount)}`,
         color: '#388bfd',
@@ -248,7 +248,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
         date: lastState ? lastState.state_date : credit.planned_close_date,
         sortDate: new Date(lastState ? lastState.state_date : credit.planned_close_date),
         type: 'closed',
-        icon: '✅',
+        icon: '',
         label: 'Кредит закрыт',
         description: 'Задолженность полностью погашена',
         color: '#3fb950',
@@ -285,7 +285,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                 onMouseOver={e => { e.currentTarget.style.background='#30363d'; }}
                 onMouseOut={e => { e.currentTarget.style.background='#21262d'; }}
               >
-                👤 Клиент 360°
+                 Клиент 360°
               </button>
             )}
             <div style={{color: isOverdue ? '#f85149' : '#8b949e', fontWeight:500, fontSize:'0.875rem'}}>
@@ -444,9 +444,9 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
             <div style={{padding:'24px 30px'}}>
               <div style={{color:'#8b949e', fontSize:'0.75rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12}}>Рекомендация</div>
               <div style={{fontSize:'0.85rem', color:'#e6edf3', lineHeight:1.5}}>
-                {riskPrediction.risk_category === 0 && '✅ Стандартное сопровождение. Риск просрочки минимален.'}
-                {riskPrediction.risk_category === 1 && '⚠️ Повышенное внимание. Рекомендуется превентивный контакт и мониторинг платёжной дисциплины.'}
-                {riskPrediction.risk_category === 2 && '🔴 Высокий риск. Необходимо срочное воздействие: звонок, предложение реструктуризации.'}
+                {riskPrediction.risk_category === 0 && ' Стандартное сопровождение. Риск просрочки минимален.'}
+                {riskPrediction.risk_category === 1 && ' Повышенное внимание. Рекомендуется превентивный контакт и мониторинг платёжной дисциплины.'}
+                {riskPrediction.risk_category === 2 && ' Высокий риск. Необходимо срочное воздействие: звонок, предложение реструктуризации.'}
               </div>
             </div>
           </div>
@@ -590,7 +590,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                 fontWeight: statesTab === 'monthly' ? 600 : 400,
               }}
             >
-              📅 На плановый день платежа ({creditStates.length})
+               На плановый день платежа ({creditStates.length})
             </button>
             <button
               onClick={() => { setStatesTab('daily'); fetchDailyStates(); setDailyPage(1); }}
@@ -602,7 +602,7 @@ export default function CreditDetailPage({ creditId, onBack, onClient360 }) {
                 fontWeight: statesTab === 'daily' ? 600 : 400,
               }}
             >
-              📆 За каждый день {dailyStates.length > 0 ? `(${dailyStates.length})` : ''}
+               За каждый день {dailyStates.length > 0 ? `(${dailyStates.length})` : ''}
             </button>
           </div>
         </div>

@@ -186,7 +186,7 @@ export default function LoanPredictionPage() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>🏦 Прогноз одобрения кредита</h1>
+      <h1 style={styles.title}> Прогноз одобрения кредита</h1>
       <p style={styles.subtitle}>
         Заполните данные заявки для получения прогноза вероятности одобрения
       </p>
@@ -195,7 +195,7 @@ export default function LoanPredictionPage() {
       <div style={styles.samplesContainer}>
         <div style={styles.samplesBlock}>
           <h2 style={{ ...styles.samplesTitle, color: '#22c55e' }}>
-            ✅ Высокая вероятность одобрения
+             Высокая вероятность одобрения
           </h2>
           <div style={styles.samplesGrid}>
             {HIGH_PROB_SAMPLES.map((s, i) => {
@@ -213,12 +213,12 @@ export default function LoanPredictionPage() {
                   <div style={styles.sampleLabel}>{s.label}</div>
                   <div style={styles.sampleDesc}>{s.description}</div>
                   <div style={styles.sampleAttrs}>
-                    <span>👤 {genderLabel(s.data.gender)}</span>
-                    <span>💼 {employmentLabel(s.data.employment)}</span>
-                    <span>💰 {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
-                    <span>🏦 {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
-                    <span>📅 {s.data.loan_term} мес.</span>
-                    <span>📋 КИ: {creditHistLabel(s.data.credit_history)}</span>
+                    <span> {genderLabel(s.data.gender)}</span>
+                    <span> {employmentLabel(s.data.employment)}</span>
+                    <span> {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
+                    <span> {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
+                    <span> {s.data.loan_term} мес.</span>
+                    <span> КИ: {creditHistLabel(s.data.credit_history)}</span>
                   </div>
                 </div>
               );
@@ -228,7 +228,7 @@ export default function LoanPredictionPage() {
 
         <div style={styles.samplesBlock}>
           <h2 style={{ ...styles.samplesTitle, color: '#ef4444' }}>
-            ❌ Низкая вероятность одобрения
+             Низкая вероятность одобрения
           </h2>
           <div style={styles.samplesGrid}>
             {LOW_PROB_SAMPLES.map((s, i) => {
@@ -246,12 +246,12 @@ export default function LoanPredictionPage() {
                   <div style={styles.sampleLabel}>{s.label}</div>
                   <div style={styles.sampleDesc}>{s.description}</div>
                   <div style={styles.sampleAttrs}>
-                    <span>👤 {genderLabel(s.data.gender)}</span>
-                    <span>💼 {employmentLabel(s.data.employment)}</span>
-                    <span>💰 {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
-                    <span>🏦 {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
-                    <span>📅 {s.data.loan_term} мес.</span>
-                    <span>📋 КИ: {creditHistLabel(s.data.credit_history)}</span>
+                    <span> {genderLabel(s.data.gender)}</span>
+                    <span> {employmentLabel(s.data.employment)}</span>
+                    <span> {s.data.income.toLocaleString('ru-RU')} ₽/мес</span>
+                    <span> {s.data.loan_amount.toLocaleString('ru-RU')} ₽</span>
+                    <span> {s.data.loan_term} мес.</span>
+                    <span> КИ: {creditHistLabel(s.data.credit_history)}</span>
                   </div>
                 </div>
               );
@@ -262,7 +262,7 @@ export default function LoanPredictionPage() {
 
       <div style={styles.content}>
         <form onSubmit={handleSubmit} style={styles.form}>
-          <h2 style={styles.sectionTitle}>👤 Данные заявителя</h2>
+          <h2 style={styles.sectionTitle}> Данные заявителя</h2>
           
           <div style={styles.row}>
             <div style={styles.field}>
@@ -350,7 +350,7 @@ export default function LoanPredictionPage() {
             />
           </div>
 
-          <h2 style={styles.sectionTitle}>💳 Параметры кредита</h2>
+          <h2 style={styles.sectionTitle}> Параметры кредита</h2>
 
           <div style={styles.row}>
             <div style={styles.field}>
@@ -382,35 +382,35 @@ export default function LoanPredictionPage() {
           <div style={styles.field}>
             <label style={styles.label}>Кредитная история</label>
             <select name="credit_history" value={formData.credit_history} onChange={handleChange} style={styles.select}>
-              <option value={1}>✅ Хорошая (нет просрочек)</option>
-              <option value={0}>❌ Плохая (были просрочки)</option>
+              <option value={1}> Хорошая (нет просрочек)</option>
+              <option value={0}> Плохая (были просрочки)</option>
             </select>
           </div>
 
           <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? '⏳ Анализ...' : '🔮 Получить прогноз'}
+            {loading ? ' Анализ...' : ' Получить прогноз'}
           </button>
         </form>
 
         <div style={styles.resultPanel}>
-          <h2 style={styles.sectionTitle}>📊 Результат прогноза</h2>
+          <h2 style={styles.sectionTitle}> Результат прогноза</h2>
           
           {error && (
             <div style={styles.error}>
-              ❌ {error}
+               {error}
             </div>
           )}
 
           {!result && !error && !loading && (
             <div style={styles.placeholder}>
-              <span style={styles.placeholderIcon}>📝</span>
+              <span style={styles.placeholderIcon}></span>
               <p>Заполните форму и нажмите "Получить прогноз"</p>
             </div>
           )}
 
           {loading && (
             <div style={styles.placeholder}>
-              <span style={styles.placeholderIcon}>⏳</span>
+              <span style={styles.placeholderIcon}></span>
               <p>Анализируем данные...</p>
             </div>
           )}
@@ -421,7 +421,7 @@ export default function LoanPredictionPage() {
                 ...styles.decisionBadge,
                 backgroundColor: getDecisionColor(result.decision)
               }}>
-                {result.decision === 'approved' ? '✅ ОДОБРЕНО' : '❌ ОТКАЗАНО'}
+                {result.decision === 'approved' ? ' ОДОБРЕНО' : ' ОТКАЗАНО'}
               </div>
 
               <div style={styles.probabilitySection}>
@@ -452,7 +452,7 @@ export default function LoanPredictionPage() {
 
               {result.risk_factors && result.risk_factors.length > 0 && (
                 <div style={styles.riskSection}>
-                  <h3 style={styles.riskTitle}>⚠️ Факторы риска</h3>
+                  <h3 style={styles.riskTitle}> Факторы риска</h3>
                   <ul style={styles.riskList}>
                     {result.risk_factors.map((factor, index) => (
                       <li key={index} style={styles.riskItem}>{factor}</li>
@@ -463,12 +463,12 @@ export default function LoanPredictionPage() {
 
               {result.risk_factors && result.risk_factors.length === 0 && (
                 <div style={styles.noRiskSection}>
-                  <span>✅ Факторы риска не выявлены</span>
+                  <span> Факторы риска не выявлены</span>
                 </div>
               )}
 
               <div style={styles.infoSection}>
-                <h3 style={styles.infoTitle}>ℹ️ Расчётные показатели</h3>
+                <h3 style={styles.infoTitle}> Расчётные показатели</h3>
                 <div style={styles.infoGrid}>
                   <div style={styles.infoItem}>
                     <span style={styles.infoLabel}>Ежемесячный платёж:</span>
@@ -494,7 +494,7 @@ export default function LoanPredictionPage() {
 
       {/* Таблица всех заявок */}
       <div style={styles.applicationsSection}>
-        <h2 style={styles.sectionTitle}>📋 История заявок на кредит</h2>
+        <h2 style={styles.sectionTitle}> История заявок на кредит</h2>
         
         {loadingApps ? (
           <div style={styles.loadingApps}>Загрузка заявок...</div>

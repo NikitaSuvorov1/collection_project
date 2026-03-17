@@ -66,7 +66,7 @@ function LoadingSpinner() {
 function ErrorMessage({ message, onRetry }) {
   return (
     <div style={{ textAlign: 'center', padding: 40 }}>
-      <p style={{ color: '#ef4444', fontSize: 16 }}>❌ {message}</p>
+      <p style={{ color: '#ef4444', fontSize: 16 }}> {message}</p>
       {onRetry && (
         <button className="btn" onClick={onRetry} style={{ marginTop: 16 }}>Повторить</button>
       )}
@@ -155,17 +155,17 @@ export default function DashboardPage() {
 
       {/* Key Metrics - 6 columns */}
       <div className="stats-grid-6">
-        <StatCard title="Всего звонков" value={totals?.calls || 0} icon="📞" />
-        <StatCard title="Контактов" value={totals?.contacts || 0} sub={`${totals?.contactRate || 0}% контактность`} icon="✓" />
-        <StatCard title="Ср. длительность" value={formatDuration(totals?.avgDuration || 0)} icon="⏱" />
-        <StatCard title="Время на звонках" value={formatDuration((totals?.totalTime || 0) * 60)} color="#22c55e" icon="🎧" />
-        <StatCard title="Время перерывов" value={formatDuration((totals?.breakTime || 0) * 60)} color="#f59e0b" icon="☕" />
-        <StatCard title="Сумма PTP" value={formatCurrency(totals?.ptpAmount || 0)} color="#3b82f6" icon="💰" />
+        <StatCard title="Всего звонков" value={totals?.calls || 0} icon="" />
+        <StatCard title="Контактов" value={totals?.contacts || 0} sub={`${totals?.contactRate || 0}% контактность`} icon="" />
+        <StatCard title="Ср. длительность" value={formatDuration(totals?.avgDuration || 0)} icon="" />
+        <StatCard title="Время на звонках" value={formatDuration((totals?.totalTime || 0) * 60)} color="#22c55e" icon="" />
+        <StatCard title="Время перерывов" value={formatDuration((totals?.breakTime || 0) * 60)} color="#f59e0b" icon="" />
+        <StatCard title="Сумма PTP" value={formatCurrency(totals?.ptpAmount || 0)} color="#3b82f6" icon="" />
       </div>
 
       {/* Charts Row 1: Call dynamics + Results pie */}
       <div className="charts-grid-2">
-        <ChartCard title="📈 Динамика звонков за период">
+        <ChartCard title=" Динамика звонков за период">
           <ResponsiveContainer>
             <AreaChart data={dailyCalls || []}>
               <defs>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="📊 Распределение результатов звонков">
+        <ChartCard title=" Распределение результатов звонков">
           <ResponsiveContainer>
             <PieChart>
               <Pie
@@ -216,7 +216,7 @@ export default function DashboardPage() {
 
       {/* Charts Row 2: Hourly + Time distribution */}
       <div className="charts-grid-2">
-        <ChartCard title="⏰ Активность по часам дня">
+        <ChartCard title=" Активность по часам дня">
           <ResponsiveContainer>
             <BarChart data={hourlyCalls || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
@@ -231,7 +231,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="⏱ Распределение рабочего времени">
+        <ChartCard title=" Распределение рабочего времени">
           <ResponsiveContainer>
             <PieChart>
               <Pie
@@ -256,7 +256,7 @@ export default function DashboardPage() {
 
       {/* Operator Performance Table */}
       <div className="credit-section" style={{ marginTop: 24 }}>
-        <h3>📋 Детальная статистика по операторам</h3>
+        <h3> Детальная статистика по операторам</h3>
         {operatorStats && operatorStats.length > 0 ? (
           <div className="table-scroll">
             <table className="credit-table">
@@ -318,7 +318,7 @@ export default function DashboardPage() {
 
       {/* Operator Comparison Chart */}
       {operatorStats && operatorStats.length > 0 && (
-        <ChartCard title="👥 Сравнение операторов" height={280}>
+        <ChartCard title=" Сравнение операторов" height={280}>
           <ResponsiveContainer>
             <BarChart data={operatorStats} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />

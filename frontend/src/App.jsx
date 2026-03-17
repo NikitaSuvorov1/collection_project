@@ -12,11 +12,11 @@ const PHASE_SAVED = 'saved';         // Результат сохранён
 
 // Status labels that match backend Intervention.STATUS_CHOICES
 const RESULT_OPTIONS = [
-  { value: 'no_answer', label: 'Не дозвонились', icon: '📵' },
-  { value: 'callback',  label: 'Перезвонить позже', icon: '🔄' },
-  { value: 'promise',   label: 'Обещание оплаты', icon: '🤝' },
-  { value: 'refuse',    label: 'Отказ от оплаты', icon: '❌' },
-  { value: 'completed', label: 'Вопрос решён / Оплачено', icon: '✅' },
+  { value: 'no_answer', label: 'Не дозвонились', icon: '' },
+  { value: 'callback',  label: 'Перезвонить позже', icon: '' },
+  { value: 'promise',   label: 'Обещание оплаты', icon: '' },
+  { value: 'refuse',    label: 'Отказ от оплаты', icon: '' },
+  { value: 'completed', label: 'Вопрос решён / Оплачено', icon: '' },
 ];
 
 const REFUSAL_REASONS = [
@@ -314,7 +314,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                     </div>
                     {c.last_promise_amount && (
                       <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2 }}>
-                        🤝 Обещание: {money(c.last_promise_amount)}
+                         Обещание: {money(c.last_promise_amount)}
                         {c.last_promise_date && <span> до {c.last_promise_date}</span>}
                       </div>
                     )}
@@ -336,7 +336,7 @@ function OperatorWorkspace({ operator, onLogout }) {
               <div className="detail-top">
                 <div>
                   <h3 style={{ margin: 0 }}>{selected.client_name}</h3>
-                  <div className="muted" style={{ marginTop: 4 }}>📞 {selected.phone}</div>
+                  <div className="muted" style={{ marginTop: 4 }}> {selected.phone}</div>
                   <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Кредит #{selected.credit_id} • Приоритет: {selected.priority}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -355,7 +355,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                   padding: '10px 14px', marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
                 }>
                   <div>
-                    <div style={{ fontSize: 13, color: '#3fb950', fontWeight: 600 }}>🤝 Последнее обещание оплаты</div>
+                    <div style={{ fontSize: 13, color: '#3fb950', fontWeight: 600 }}> Последнее обещание оплаты</div>
                     <div style={{ fontSize: 12, color: '#3fb950', marginTop: 2 }}>
                       {selected.last_promise_date ? `Срок: до ${selected.last_promise_date}` : ''}
                     </div>
@@ -388,7 +388,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                         </div>
                         {h.promise_amount > 0 && (
                           <div style={{ fontSize: 13, color: '#16a34a', marginTop: 4 }}>
-                            💰 Обещание: {money(h.promise_amount)}
+                             Обещание: {money(h.promise_amount)}
                             {h.promise_date && ` до ${h.promise_date}`}
                           </div>
                         )}
@@ -421,7 +421,7 @@ function OperatorWorkspace({ operator, onLogout }) {
             {phase === PHASE_IDLE && (
               <>
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <div style={{ fontSize: 48 }}>📞</div>
+                  <div style={{ fontSize: 48 }}></div>
                   <div style={{ marginTop: 8, fontSize: 14 }} className="muted">
                     {selected ? `Готов к звонку: ${selected.client_name}` : 'Выберите клиента'}
                   </div>
@@ -522,14 +522,14 @@ function OperatorWorkspace({ operator, onLogout }) {
 
                 {validationError && (
                   <div style={{ color: '#f85149', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>
-                    ⚠ {validationError}
+                     {validationError}
                   </div>
                 )}
 
                 <button className="btn large" style={{ width: '100%' }}
                   onClick={handleSaveIntervention} disabled={saving}
                 >
-                  {saving ? 'Сохранение...' : '💾 Сохранить результат'}
+                  {saving ? 'Сохранение...' : ' Сохранить результат'}
                 </button>
                 <button className="btn ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setPhase(PHASE_CALLING)}>
                   ← Вернуться к звонку
@@ -540,7 +540,7 @@ function OperatorWorkspace({ operator, onLogout }) {
             {/* ---- PHASE: SAVED ---- */}
             {phase === PHASE_SAVED && (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 48 }}>✅</div>
+                <div style={{ fontSize: 48 }}></div>
                 <div style={{ fontWeight: 600, fontSize: 16, marginTop: 8, color: '#16a34a' }}>
                   Результат сохранён!
                 </div>
@@ -617,13 +617,13 @@ export default function App() {
               className={`btn ${page === 'dashboard' ? '' : 'ghost'}`}
               onClick={() => setPage('dashboard')}
             >
-              📊 Дашборд руководителя
+               Дашборд руководителя
             </button>
             <button 
               className={`btn ${page === 'workspace' ? '' : 'ghost'}`}
               onClick={() => setPage('workspace')}
             >
-              📞 Рабочий стол оператора
+               Рабочий стол оператора
             </button>
           </div>
           

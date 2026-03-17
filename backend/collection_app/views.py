@@ -1568,3 +1568,152 @@ class ScoringDashboardView(APIView):
             'total_expected_recovery': total_expected_recovery,
             'active_model': model_info,
         })
+
+
+class PreOverdueMonitorView(APIView):
+    """
+    Предиктивный мониторинг выхода на просрочку.
+    Возвращает клиентов с активными кредитами, близкой датой платежа,
+    рисками просрочки и compliance-статусом по 230-ФЗ.
+
+    GET /api/pre-overdue/
+        ?days_ahead=7      — горизонт (по умолчанию 14 дней)
+        &risk_min=0.3      — мин. risk_score (по умолчанию 0)
+        &limit=100         — макс. кол-во (по умолчанию 100)
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.db.models.functions import Coalesce
+        days_ahead = int(request.query_params.get('days_ahead', 14))
+        risk_min = float(request.query_params.get('risk_min', 0))
+        limit = int(request.query_params.get('limit', 100))
+
+        today = date_type.today()
+        horizon = today + timedelta(days=days_ahead)
+
+        # Active/restructured credits (exclude already closed by planned_close_date)
+        credits = Credit.objects.filter(
+            status__in=['active', 'overdue', 'restructured']
+        ).exclude(
+            planned_close_date__lt=today
+        ).select_related('client').prefetch_related('states', 'payments', 'interventions')
+
+        rows = []
+        for credit in credits[:limit]:
+            client = credit.client
+
+            # Latest state — check early to skip zero-debt credits
+            latest_state = credit.states.order_by('-state_date').first()
+            overdue_days = latest_state.overdue_days if latest_state else 0
+            total_debt = float(
+                (latest_state.principal_debt or 0) +
+                (latest_state.overdue_principal or 0) +
+                (latest_state.interest or 0) +
+                (latest_state.overdue_interest or 0) +
+                (latest_state.penalties or 0)
+            ) if latest_state else float(credit.principal_amount or 0)
+
+            # Skip credits with zero remaining debt
+            if total_debt == 0 and overdue_days == 0:
+                continue
+
+            # Next planned payment date
+            next_payment_date = self._next_payment_date(credit, today)
+
+            # Build features & predict
+            features = OverduePredictionView._build_features(credit)
+            prediction = predict_risk(features)
+
+            risk_score = prediction.get('risk_score', 0)
+            if risk_score < risk_min:
+                continue
+
+            # Compliance status for phone & sms
+            phone_compliance = can_contact(client.id, 'phone')
+            sms_compliance = can_contact(client.id, 'sms')
+
+            rows.append({
+                'credit_id': credit.id,
+                'client_id': client.id,
+                'client_name': client.full_name,
+                'client_phone': client.phone_mobile or '',
+                'product_type': credit.get_product_type_display(),
+                'credit_status': credit.get_status_display(),
+                'principal_amount': float(credit.principal_amount or 0),
+                'monthly_payment': float(credit.monthly_payment or 0),
+                'total_debt': total_debt,
+                'overdue_days': overdue_days,
+                'delinquency_bucket': credit.delinquency_bucket,
+                'next_payment_date': next_payment_date.isoformat() if next_payment_date else None,
+                'days_to_payment': (next_payment_date - today).days if next_payment_date else None,
+                'risk_score': risk_score,
+                'risk_category': prediction.get('risk_category', 0),
+                'risk_label': prediction.get('risk_label', 'Низкий'),
+                'probabilities': prediction.get('probabilities', {}),
+                'phone': {
+                    'allowed': phone_compliance.get('allowed', False),
+                    'reason': phone_compliance.get('reason'),
+                    'violations': phone_compliance.get('violations', []),
+                    'counts': phone_compliance.get('counts', {}),
+                    'limits': phone_compliance.get('limits', {}),
+                    'checks': phone_compliance.get('checks', {}),
+                },
+                'sms': {
+                    'allowed': sms_compliance.get('allowed', False),
+                    'reason': sms_compliance.get('reason'),
+                    'violations': sms_compliance.get('violations', []),
+                    'counts': sms_compliance.get('counts', {}),
+                    'limits': sms_compliance.get('limits', {}),
+                    'checks': sms_compliance.get('checks', {}),
+                },
+            })
+
+        # Sort by risk_score descending
+        rows.sort(key=lambda r: r['risk_score'], reverse=True)
+        rows = rows[:limit]
+
+        return Response({
+            'total': len(rows),
+            'horizon_days': days_ahead,
+            'generated_at': timezone.now().isoformat(),
+            'results': rows,
+        })
+
+    @staticmethod
+    def _next_payment_date(credit, today):
+        """Определяет ближайшую плановую дату платежа."""
+        # From CreditState planned_payment_date
+        upcoming_state = credit.states.filter(
+            planned_payment_date__gte=today
+        ).order_by('planned_payment_date').values_list('planned_payment_date', flat=True).first()
+        if upcoming_state:
+            return upcoming_state
+
+        # From Payment.planned_date
+        upcoming_pay = credit.payments.filter(
+            planned_date__gte=today
+        ).order_by('planned_date').values_list('planned_date', flat=True).first()
+        if upcoming_pay:
+            return upcoming_pay
+
+        # Estimate from open_date + monthly cycle
+        if credit.open_date:
+            day_of_month = credit.open_date.day
+            try:
+                candidate = today.replace(day=min(day_of_month, 28))
+            except ValueError:
+                candidate = today.replace(day=28)
+            if candidate <= today:
+                month = candidate.month + 1
+                year = candidate.year
+                if month > 12:
+                    month = 1
+                    year += 1
+                try:
+                    candidate = candidate.replace(year=year, month=month)
+                except ValueError:
+                    candidate = candidate.replace(year=year, month=month, day=28)
+            return candidate
+
+        return None

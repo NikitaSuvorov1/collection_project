@@ -256,8 +256,8 @@ function getResultBadge(result) {
 }
 
 function getChannelIcon(channel) {
-  const icons = { phone: '📞', sms: '✉️', whatsapp: '💬', email: '📧', push: '🔔', letter: '✉️', visit: '🚶' };
-  return icons[channel] || '📞';
+  const icons = { phone: '', sms: '', whatsapp: '', email: '', push: '', letter: '', visit: '' };
+  return icons[channel] || '';
 }
 
 function getChannelLabel(channel) {
@@ -314,12 +314,12 @@ function getDayLabel(day) {
 function RiskTriggerBadge({ type, active }) {
   if (!active) return null;
   const triggers = {
-    income_dropped: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '💰', label: 'Падение дохода' },
-    job_changed_recently: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '💼', label: 'Смена работы' },
-    multiple_credits: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '🏦', label: 'Много кредитов' },
-    activity_dropped: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '📉', label: 'Падение активности' },
+    income_dropped: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '', label: 'Падение дохода' },
+    job_changed_recently: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '', label: 'Смена работы' },
+    multiple_credits: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '', label: 'Много кредитов' },
+    activity_dropped: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '', label: 'Падение активности' },
   };
-  const style = triggers[type] || { bg: '#21262d', color: '#8b949e', icon: '⚡', label: type };
+  const style = triggers[type] || { bg: '#21262d', color: '#8b949e', icon: '', label: type };
   
   return (
     <div className="risk-trigger" style={{ background: style.bg, color: style.color }}>
@@ -333,7 +333,7 @@ function NBAPanel({ nba, onExecute, onSkip }) {
   if (!nba) {
     return (
       <div className="nba-panel empty">
-        <h3>🎯 Next Best Action</h3>
+        <h3> Next Best Action</h3>
         <p>Нет активных рекомендаций для этого клиента</p>
       </div>
     );
@@ -346,7 +346,7 @@ function NBAPanel({ nba, onExecute, onSkip }) {
   return (
     <div className="nba-panel">
       <div className="nba-header">
-        <h3>🎯 Next Best Action</h3>
+        <h3> Next Best Action</h3>
         <span className="nba-confidence">{Math.round(confidenceScore * 100)}% уверенность</span>
       </div>
       
@@ -382,12 +382,12 @@ function NBAPanel({ nba, onExecute, onSkip }) {
       </div>
       
       <div className="nba-reasoning">
-        <strong>💡 Обоснование:</strong> {nba.reasoning}
+        <strong> Обоснование:</strong> {nba.reasoning}
       </div>
       
       <div className="nba-actions">
-        <button className="btn" onClick={() => onExecute(nba.id)}>✓ Принять</button>
-        <button className="btn ghost" onClick={() => onSkip(nba.id)}>✗ Отклонить</button>
+        <button className="btn" onClick={() => onExecute(nba.id)}> Принять</button>
+        <button className="btn ghost" onClick={() => onSkip(nba.id)}> Отклонить</button>
       </div>
     </div>
   );
@@ -397,7 +397,7 @@ function ForecastPanel({ forecast }) {
   if (!forecast) {
     return (
       <div className="forecast-panel empty">
-        <h3>📊 Прогноз возврата</h3>
+        <h3> Прогноз возврата</h3>
         <p>Нет данных о прогнозе</p>
       </div>
     );
@@ -416,7 +416,7 @@ function ForecastPanel({ forecast }) {
   
   return (
     <div className="forecast-panel">
-      <h3>📊 Прогноз возврата</h3>
+      <h3> Прогноз возврата</h3>
       
       <div className="forecast-main">
         <div className="forecast-probability">
@@ -447,13 +447,13 @@ function ForecastPanel({ forecast }) {
       <div className="forecast-factors">
         {positiveFactors.length > 0 && (
           <div className="factors-positive">
-            <strong>✅ Позитивные факторы:</strong>
+            <strong> Позитивные факторы:</strong>
             <ul>{positiveFactors.map((f, i) => <li key={i}>{f}</li>)}</ul>
           </div>
         )}
         {negativeFactors.length > 0 && (
           <div className="factors-negative">
-            <strong>❌ Негативные факторы:</strong>
+            <strong> Негативные факторы:</strong>
             <ul>{negativeFactors.map((f, i) => <li key={i}>{f}</li>)}</ul>
           </div>
         )}
@@ -480,7 +480,7 @@ function ForecastPanel({ forecast }) {
       </div>
       
       <div className="forecast-recommendation">
-        <strong>🎯 Рекомендация:</strong> {getRecommendationLabel(forecast.recommendation)}
+        <strong> Рекомендация:</strong> {getRecommendationLabel(forecast.recommendation)}
         <span className="rec-confidence">({Math.round(recConfidence * 100)}%)</span>
       </div>
     </div>
@@ -514,7 +514,7 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
   if (loading) {
     return (
       <div className="copilot-panel loading">
-        <h3>🤖 Copilot-подсказки</h3>
+        <h3> Copilot-подсказки</h3>
         <p>Загрузка скриптов...</p>
       </div>
     );
@@ -523,13 +523,13 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
   return (
     <div className="copilot-panel">
       <div className="copilot-header">
-        <h3>🤖 Copilot-подсказки</h3>
+        <h3> Copilot-подсказки</h3>
         <span className="copilot-badge">AI-ассистент</span>
       </div>
       
       {/* Script selector */}
       <div className="copilot-section">
-        <h4>📜 Выберите скрипт</h4>
+        <h4> Выберите скрипт</h4>
         <div className="script-selector">
           {scripts.map((script) => (
             <button 
@@ -546,31 +546,31 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
       {activeScript && (
         <>
           <div className="copilot-section">
-            <h4>💬 Вступительные фразы</h4>
+            <h4> Вступительные фразы</h4>
             <div className="suggestions-list">
               {(activeScript.opening_phrases || []).map((phrase, i) => (
                 <div key={i} className="script-suggestion">
                   <div className="suggestion-phrase">"{phrase}"</div>
-                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}>📋</button>
+                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}></button>
                 </div>
               ))}
             </div>
           </div>
           
           <div className="copilot-section">
-            <h4>⭐ Ключевые фразы</h4>
+            <h4> Ключевые фразы</h4>
             <div className="suggestions-list">
               {(activeScript.key_phrases || []).map((phrase, i) => (
                 <div key={i} className="script-suggestion">
                   <div className="suggestion-phrase">"{phrase}"</div>
-                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}>📋</button>
+                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}></button>
                 </div>
               ))}
             </div>
           </div>
           
           <div className="copilot-section">
-            <h4>🛡️ Обработка возражений</h4>
+            <h4> Обработка возражений</h4>
             <div className="objections-list">
               {Object.entries(activeScript.objection_handlers || {}).map(([objection, responses]) => (
                 <div key={objection} className="objection-item">
@@ -579,7 +579,7 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
                     {responses.map((response, i) => (
                       <div key={i} className="response-item" onClick={() => onUsePhrase(response)}>
                         <span>→ {response}</span>
-                        <button className="btn small ghost">📋</button>
+                        <button className="btn small ghost"></button>
                       </div>
                     ))}
                   </div>
@@ -589,12 +589,12 @@ function CopilotPanel({ psychotype, onUsePhrase }) {
           </div>
           
           <div className="copilot-section">
-            <h4>✅ Завершающие фразы</h4>
+            <h4> Завершающие фразы</h4>
             <div className="suggestions-list">
               {(activeScript.closing_phrases || []).map((phrase, i) => (
                 <div key={i} className="script-suggestion">
                   <div className="suggestion-phrase">"{phrase}"</div>
-                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}>📋</button>
+                  <button className="btn small ghost" onClick={() => onUsePhrase(phrase)}></button>
                 </div>
               ))}
             </div>
@@ -693,7 +693,7 @@ export default function Client360Page({ clientId, onBack }) {
           </div>
         </header>
         <div className="error-message" style={{textAlign:'center',padding:'60px 40px',color:'#737373'}}>
-          Выберите клиента из рабочего стола оператора, нажав кнопку «👤 360° профиль»
+          Выберите клиента из рабочего стола оператора, нажав кнопку « 360° профиль»
         </div>
       </div>
     );
@@ -775,22 +775,22 @@ export default function Client360Page({ clientId, onBack }) {
       {/* Tabs */}
       <nav className="client-360-tabs">
         <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
-          📊 Обзор
+           Обзор
         </button>
         <button className={activeTab === 'nba' ? 'active' : ''} onClick={() => setActiveTab('nba')}>
-          🎯 NBA
+           NBA
         </button>
         <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>
-          📞 История
+           История
         </button>
         <button className={activeTab === 'copilot' ? 'active' : ''} onClick={() => setActiveTab('copilot')}>
-          🤖 Copilot
+           Copilot
         </button>
       </nav>
       
       {/* Copied notification */}
       {copiedPhrase && (
-        <div className="copied-notification">✓ Скопировано в буфер</div>
+        <div className="copied-notification"> Скопировано в буфер</div>
       )}
       
       {/* Content */}
@@ -801,7 +801,7 @@ export default function Client360Page({ clientId, onBack }) {
             <div className="overview-left">
               {/* Debt Summary */}
               <div className="metric-card debt-summary">
-                <h3>💰 Задолженность</h3>
+                <h3> Задолженность</h3>
                 <div className="debt-total">
                   <span className="debt-label">Общий долг:</span>
                   <span className="debt-value">{formatCurrency(totalDebt)}</span>
@@ -850,7 +850,7 @@ export default function Client360Page({ clientId, onBack }) {
               
               {/* Payment Discipline */}
               <div className="metric-card">
-                <h3>📈 Платёжная дисциплина</h3>
+                <h3> Платёжная дисциплина</h3>
                 <div className="discipline-meter">
                   <div 
                     className="discipline-fill" 
@@ -874,21 +874,21 @@ export default function Client360Page({ clientId, onBack }) {
               
               {/* Risk Triggers */}
               <div className="metric-card">
-                <h3>⚠️ Триггеры риска</h3>
+                <h3> Триггеры риска</h3>
                 <div className="triggers-list">
                   <RiskTriggerBadge type="income_dropped" active={profile?.income_dropped} />
                   <RiskTriggerBadge type="job_changed_recently" active={profile?.job_changed_recently} />
                   <RiskTriggerBadge type="multiple_credits" active={profile?.multiple_credits} />
                   <RiskTriggerBadge type="activity_dropped" active={profile?.activity_dropped} />
                   {!profile?.income_dropped && !profile?.job_changed_recently && !profile?.multiple_credits && !profile?.activity_dropped && (
-                    <div className="no-triggers">Триггеров не обнаружено ✓</div>
+                    <div className="no-triggers">Триггеров не обнаружено </div>
                   )}
                 </div>
               </div>
               
               {/* Contact Preferences */}
               <div className="metric-card">
-                <h3>📱 Предпочтения контакта</h3>
+                <h3> Предпочтения контакта</h3>
                 <div className="contact-prefs">
                   <div>
                     <span>Лучший канал:</span>
@@ -924,7 +924,7 @@ export default function Client360Page({ clientId, onBack }) {
 
                 return (
                   <div className="metric-card" style={{ borderLeft: `4px solid ${overallColor}` }}>
-                    <h3>🤖 ML-прогноз просрочки</h3>
+                    <h3> ML-прогноз просрочки</h3>
                     
                     {/* Overall risk gauge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '12px 0' }}>
@@ -1002,7 +1002,7 @@ export default function Client360Page({ clientId, onBack }) {
                     {/* Recommendation */}
                     {maxRisk.recommendation && (
                       <div style={{ marginTop: 8, padding: '6px 10px', background: `${overallColor}10`, borderRadius: 6, fontSize: 12, color: '#8b949e' }}>
-                        💡 {maxRisk.recommendation}
+                         {maxRisk.recommendation}
                       </div>
                     )}
                   </div>
@@ -1012,7 +1012,7 @@ export default function Client360Page({ clientId, onBack }) {
               {/* Forecast Mini */}
               {forecast && (
                 <div className="forecast-mini">
-                  <h3>🔮 Прогноз возврата</h3>
+                  <h3> Прогноз возврата</h3>
                   <div className="forecast-mini-content">
                     <div className="forecast-prob" style={{ 
                       color: Number(forecast.return_probability) >= 0.5 ? '#22c55e' : '#f59e0b' 
@@ -1031,7 +1031,7 @@ export default function Client360Page({ clientId, onBack }) {
               {/* Quick NBA */}
               {primaryNBA && (
                 <div className="nba-mini">
-                  <h3>🎯 Рекомендация</h3>
+                  <h3> Рекомендация</h3>
                   <div className="nba-mini-content">
                     <div className="nba-channel-icon">{getChannelIcon(primaryNBA.recommended_channel)}</div>
                     <div className="nba-mini-details">
@@ -1047,7 +1047,7 @@ export default function Client360Page({ clientId, onBack }) {
               {/* Profile info */}
               {profile && (
                 <div className="metric-card">
-                  <h3>📋 Рекомендация по стратегии</h3>
+                  <h3> Рекомендация по стратегии</h3>
                   <div className="strategy-rec">
                     {getRecommendationLabel(profile.strategic_recommendation)}
                   </div>
@@ -1073,7 +1073,7 @@ export default function Client360Page({ clientId, onBack }) {
         {activeTab === 'history' && (
           <div className="history-layout">
             <div className="history-header">
-              <h3>📞 История контактов</h3>
+              <h3> История контактов</h3>
               <div className="history-stats">
                 <span>Всего: {interventions.length}</span>
                 <span>Контактность: {totalContacts > 0 ? Math.round((successfulContacts / totalContacts) * 100) : 0}%</span>

@@ -142,6 +142,7 @@ function Root() {
   };
 
   const [prevPageClient360, setPrevPageClient360] = useState(savedNav.prevPageClient360 || 'desk');
+  const [preOverdueContext, setPreOverdueContext] = useState(null);
 
   // Persist navigation state to localStorage whenever it changes
   useEffect(() => {
@@ -169,28 +170,31 @@ function Root() {
   return (
     <div>
       <nav style={{maxWidth:1400,margin:'0 auto',display:'flex',gap:8,alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #30363d',background:'#161b22'}}>
-        <button className={`btn ${page === 'desk' ? '' : 'ghost'}`} onClick={() => setPage('desk')}>🏠 Рабочий стол</button>
-        <button className={`btn ${page === 'credits' ? '' : 'ghost'}`} onClick={() => setPage('credits')}>💳 Кредиты</button>
-        <button className={`btn ${page === 'client360' ? '' : 'ghost'}`} onClick={() => setPage('client360')}>👤 360° Клиент</button>
-        <button className={`btn ${page === 'prediction' ? '' : 'ghost'}`} onClick={() => setPage('prediction')}>🔮 Скоринг</button>
-        <button className={`btn ${page === 'overdue' ? '' : 'ghost'}`} onClick={() => setPage('overdue')}>⚠️ Просрочка</button>
-        <button className={`btn ${page === 'training' ? '' : 'ghost'}`} onClick={() => setPage('training')}>🧠 Обучение</button>
-        <button className={`btn ${page === 'loanTraining' ? '' : 'ghost'}`} onClick={() => setPage('loanTraining')}>🏦 Скоринг ML</button>
-        <button className={`btn ${page === 'database' ? '' : 'ghost'}`} onClick={() => setPage('database')}>🗄️ База данных</button>
-        <button className={`btn ${page === 'mystats' ? '' : 'ghost'}`} onClick={() => setPage('mystats')}>📈 Моя статистика</button>
-        {isManager && <button className={`btn ${page === 'dashboard' ? '' : 'ghost'}`} onClick={() => setPage('dashboard')}>📊 Дашборд</button>}
+        <button className={`btn ${page === 'desk' ? '' : 'ghost'}`} onClick={() => setPage('desk')}> Рабочий стол</button>
+        <button className={`btn ${page === 'credits' ? '' : 'ghost'}`} onClick={() => setPage('credits')}> Кредиты</button>
+        <button className={`btn ${page === 'client360' ? '' : 'ghost'}`} onClick={() => setPage('client360')}> 360° Клиент</button>
+        <button className={`btn ${page === 'prediction' ? '' : 'ghost'}`} onClick={() => setPage('prediction')}> Скоринг</button>
+        <button className={`btn ${page === 'overdue' ? '' : 'ghost'}`} onClick={() => setPage('overdue')}> Просрочка</button>
+        <button className={`btn ${page === 'training' ? '' : 'ghost'}`} onClick={() => setPage('training')}> Обучение</button>
+        <button className={`btn ${page === 'loanTraining' ? '' : 'ghost'}`} onClick={() => setPage('loanTraining')}> Скоринг ML</button>
+        <button className={`btn ${page === 'database' ? '' : 'ghost'}`} onClick={() => setPage('database')}> База данных</button>
+        <button className={`btn ${page === 'mystats' ? '' : 'ghost'}`} onClick={() => setPage('mystats')}> Моя статистика</button>
+        {isManager && <button className={`btn ${page === 'dashboard' ? '' : 'ghost'}`} onClick={() => setPage('dashboard')}> Дашборд</button>}
         <div style={{flex:1}} />
         <span style={{fontSize:13,color:'#8b949e'}}>{user.name} ({user.role === 'manager' ? 'Руководитель' : 'Оператор'})</span>
         <button className="btn small ghost" onClick={handleLogout}>Выход</button>
       </nav>
-      {page === 'desk' && <Desk user={user} onClient360={handleClient360} onCreditClick={(id) => handleCreditClick(id, 'desk')} />}
+      {page === 'desk' && <Desk user={user} onClient360={handleClient360} onCreditClick={(id) => handleCreditClick(id, 'desk')} preOverdueContext={preOverdueContext} onClearPreOverdue={() => setPreOverdueContext(null)} />}
       {page === 'credits' && <CreditsPage onCreditClick={handleCreditClick} />}
       {page === 'creditDetail' && creditId && <CreditDetailPage creditId={creditId} onBack={handleBackToCredits} onClient360={handleClient360} />}
       {page === 'creditDetailFromDesk' && creditId && <CreditDetailPage creditId={creditId} onBack={() => { setCreditId(null); setPage('desk'); }} onClient360={handleClient360} />}
       {page === 'dashboard' && isManager && <DashboardPage />}
       {page === 'client360' && <Client360Page clientId={client360Id} onBack={handleBackFromClient360} />}
       {page === 'prediction' && <LoanPredictionPage />}
-      {page === 'overdue' && <OverduePredictionPage />}
+      {page === 'overdue' && <OverduePredictionPage onStartCall={(row) => {
+        setPreOverdueContext(row);
+        setPage('desk');
+      }} onCreditClick={(id) => handleCreditClick(id, 'overdue')} />}
       {page === 'training' && <ModelTrainingPage />}
       {page === 'loanTraining' && <LoanTrainingPage />}
       {page === 'database' && <DatabaseViewPage />}

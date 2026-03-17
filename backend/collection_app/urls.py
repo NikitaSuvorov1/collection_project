@@ -33,6 +33,7 @@ urlpatterns = [
     
     # ML prediction endpoints
     path('overdue-prediction/', views.OverduePredictionView.as_view(), name='overdue-prediction'),
+    path('pre-overdue/', views.PreOverdueMonitorView.as_view(), name='pre-overdue-monitor'),
     
     # 230-ФЗ Compliance
     path('compliance/check/', views.ComplianceCheckView.as_view(), name='compliance-check'),

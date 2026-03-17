@@ -5,8 +5,8 @@ const API = 'http://127.0.0.1:8000/api';
 /* ===== Константы признаков ===== */
 const FEATURE_GROUPS = [
   {
-    title: '👤 Клиентские признаки',
-    icon: '👤',
+    title: ' Клиентские признаки',
+    icon: '',
     features: [
       { name: 'age', label: 'Возраст', source: 'Client.birth_date', transform: '(today - birth_date).days / 365.25', type: 'float' },
       { name: 'gender', label: 'Пол', source: 'Client.gender', transform: 'M → 1, F → 0', type: 'int (0/1)' },
@@ -19,8 +19,8 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '💳 Кредитные признаки',
-    icon: '💳',
+    title: ' Кредитные признаки',
+    icon: '',
     features: [
       { name: 'credit_amount', label: 'Сумма кредита', source: 'Credit.principal_amount', transform: 'float(principal_amount)', type: 'float (₽)' },
       { name: 'credit_term', label: 'Срок кредита', source: 'Credit.open_date, planned_close_date', transform: '(planned_close_date - open_date).days // 30', type: 'int (мес.)' },
@@ -32,8 +32,8 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '📊 Платёжная дисциплина',
-    icon: '📊',
+    title: ' Платёжная дисциплина',
+    icon: '',
     features: [
       { name: 'total_payments', label: 'Всего платежей', source: 'Payment (count)', transform: 'count(credit.payments)', type: 'int' },
       { name: 'overdue_payments', label: 'Просроченных платежей', source: 'Payment (filter)', transform: 'count(payments где overdue_days > 0)', type: 'int' },
@@ -46,8 +46,8 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '🤝 Взаимодействие',
-    icon: '🤝',
+    title: ' Взаимодействие',
+    icon: '',
     features: [
       { name: 'total_interventions', label: 'Всего воздействий', source: 'Intervention (count)', transform: 'count(interventions)', type: 'int' },
       { name: 'completed_interventions', label: 'Завершённых', source: 'Intervention (filter)', transform: 'count(status="completed")', type: 'int' },
@@ -60,7 +60,7 @@ const PIPELINE_STEPS = [
   {
     step: 1,
     title: 'Сбор данных',
-    icon: '📥',
+    icon: '',
     desc: 'Извлечение записей из таблиц Client, Credit, Payment, Intervention. Для каждого кредита собирается полный контекст клиента и истории платежей.',
     detail: 'Два режима: из таблицы TrainingData (--use-db-training-data) или генерация на лету из связанных таблиц. Используется select_related и prefetch_related для оптимизации запросов.',
     command: 'python manage.py train_overdue_model',
@@ -68,7 +68,7 @@ const PIPELINE_STEPS = [
   {
     step: 2,
     title: 'Инженерия признаков',
-    icon: '🔧',
+    icon: '',
     desc: 'Вычисление 26 признаков из 4 групп: клиентские, кредитные, платёжная дисциплина и взаимодействие.',
     detail: 'Категориальные переменные кодируются числами (Label Encoding). Рассчитываются агрегаты: доля просрочек за 12 месяцев, LTI ratio, максимальные дни просрочки и средний размер платежа.',
     command: null,
@@ -76,7 +76,7 @@ const PIPELINE_STEPS = [
   {
     step: 3,
     title: 'Разметка целевой переменной',
-    icon: '🏷️',
+    icon: '',
     desc: 'Определение risk_category ∈ {0, 1, 2} на основе правил:',
     detail: '0 (Низкий): overdue_ratio < 0.2 И max_overdue_days < 15\n1 (Средний): 0.2 ≤ overdue_ratio < 0.5 ИЛИ max_overdue_days 15–60\n2 (Высокий): overdue_ratio ≥ 0.5 ИЛИ max_overdue_days > 60\nАвтоматически: статусы default, legal, sold, written_off → класс 2',
     command: null,
@@ -84,7 +84,7 @@ const PIPELINE_STEPS = [
   {
     step: 4,
     title: 'Нормализация (StandardScaler)',
-    icon: '⚖️',
+    icon: '',
     desc: 'Приведение всех 26 числовых признаков к единому масштабу: μ = 0, σ = 1.',
     detail: 'StandardScaler из sklearn.preprocessing. Fit выполняется только на train-выборке, transform применяется к обеим частям (train + test) для предотвращения утечки данных.',
     command: null,
@@ -92,7 +92,7 @@ const PIPELINE_STEPS = [
   {
     step: 5,
     title: 'Разделение выборки',
-    icon: '✂️',
+    icon: '',
     desc: 'Стратифицированное разбиение 80% / 20% (train / test).',
     detail: 'train_test_split с stratify=y для сохранения пропорций классов. random_state=42 для воспроизводимости.',
     command: null,
@@ -100,7 +100,7 @@ const PIPELINE_STEPS = [
   {
     step: 6,
     title: 'Обучение RandomForestClassifier',
-    icon: '🌲',
+    icon: '',
     desc: 'Ансамбль из 200 деревьев решений с ограничением глубины.',
     detail: 'n_estimators=200, max_depth=12, min_samples_split=8, min_samples_leaf=4, class_weight="balanced" (компенсация дисбаланса классов), n_jobs=-1 (все ядра CPU).',
     command: null,
@@ -108,7 +108,7 @@ const PIPELINE_STEPS = [
   {
     step: 7,
     title: 'Кросс-валидация (5-fold)',
-    icon: '🔄',
+    icon: '',
     desc: 'Оценка устойчивости модели методом 5-fold cross-validation.',
     detail: 'cross_val_score с scoring="accuracy". Вычисляются mean и std по 5 фолдам. Модель обучается на нормализованных данных (scaler.transform(X)).',
     command: null,
@@ -116,7 +116,7 @@ const PIPELINE_STEPS = [
   {
     step: 8,
     title: 'Оценка качества',
-    icon: '📈',
+    icon: '',
     desc: 'Расчёт метрик: Accuracy, Precision, Recall, F1-score по каждому классу, матрица ошибок.',
     detail: 'classification_report с target_names для каждого класса. Feature importances из модели Random Forest, confusion_matrix.',
     command: null,
@@ -124,7 +124,7 @@ const PIPELINE_STEPS = [
   {
     step: 9,
     title: 'Сохранение модели',
-    icon: '💾',
+    icon: '',
     desc: 'Сериализация обученной модели, скейлера и списка признаков в .pkl файлы.',
     detail: 'Файлы: overdue_model.pkl, overdue_scaler.pkl, overdue_features.pkl. Директория: backend/collection_app/ml/saved_models/',
     command: null,
@@ -132,7 +132,7 @@ const PIPELINE_STEPS = [
   {
     step: 10,
     title: 'Инференс (Prediction API)',
-    icon: '🎯',
+    icon: '',
     desc: 'Применение обученной модели к новым данным через REST API.',
     detail: 'GET /api/overdue-prediction/?credit_id=N — прогноз для одного кредита\nGET /api/overdue-prediction/?client_id=N — все кредиты клиента\nPOST /api/overdue-prediction/ — пакетный прогноз с ранжированием\n\nЕсли модель не обучена, используется rule-based эвристика (fallback).',
     command: null,
@@ -242,17 +242,17 @@ export default function ModelTrainingPage() {
   };
 
   const TABS = [
-    { key: 'pipeline', label: '🔄 Пайплайн обучения' },
-    { key: 'features', label: '📋 Признаки (26)' },
-    { key: 'target', label: '🏷️ Целевая переменная' },
-    { key: 'model', label: '🌲 Модель и гиперпараметры' },
-    { key: 'api', label: '🌐 API инференса' },
-    { key: 'run', label: '▶️ Запуск обучения' },
+    { key: 'pipeline', label: ' Пайплайн обучения' },
+    { key: 'features', label: ' Признаки (26)' },
+    { key: 'target', label: ' Целевая переменная' },
+    { key: 'model', label: ' Модель и гиперпараметры' },
+    { key: 'api', label: ' API инференса' },
+    { key: 'run', label: ' Запуск обучения' },
   ];
 
   return (
     <div style={s.page}>
-      <h1 style={s.h1}>🧠 Обучение модели прогнозирования просрочки</h1>
+      <h1 style={s.h1}> Обучение модели прогнозирования просрочки</h1>
       <div style={s.subtitle}>
         Мультиклассовая классификация риска выхода клиента на просрочку при следующем платеже • RandomForestClassifier • 26 признаков • 3 класса риска
       </div>
@@ -269,7 +269,7 @@ export default function ModelTrainingPage() {
       {/* =================== PIPELINE =================== */}
       {activeTab === 'pipeline' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🔄 Пайплайн обучения модели</div>
+          <div style={s.sectionTitle}> Пайплайн обучения модели</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {PIPELINE_STEPS.map((step, i) => (
               <React.Fragment key={step.step}>
@@ -306,7 +306,7 @@ export default function ModelTrainingPage() {
       {/* =================== FEATURES =================== */}
       {activeTab === 'features' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>📋 Вектор признаков — 26 features</div>
+          <div style={s.sectionTitle}> Вектор признаков — 26 features</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Каждая запись обучающей выборки содержит вектор из 26 числовых признаков, извлечённых из 4 таблиц БД.
           </div>
@@ -337,7 +337,7 @@ export default function ModelTrainingPage() {
           ))}
 
           <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-            💡 Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1) перед подачей в модель. Fit выполняется только на train-выборке.
+             Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1) перед подачей в модель. Fit выполняется только на train-выборке.
           </div>
         </div>
       )}
@@ -345,7 +345,7 @@ export default function ModelTrainingPage() {
       {/* =================== TARGET =================== */}
       {activeTab === 'target' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🏷️ Целевая переменная — risk_category</div>
+          <div style={s.sectionTitle}> Целевая переменная — risk_category</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Мультиклассовая классификация: 3 категории риска выхода на просрочку.
           </div>
@@ -396,7 +396,7 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
       {/* =================== MODEL =================== */}
       {activeTab === 'model' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🌲 RandomForestClassifier — гиперпараметры</div>
+          <div style={s.sectionTitle}> RandomForestClassifier — гиперпараметры</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Ансамблевый метод: коллектив из 200 деревьев решений с ограничением сложности и балансировкой классов.
           </div>
@@ -421,12 +421,12 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
           </table>
 
           <div style={{ marginTop: 24 }}>
-            <div style={{ ...s.sectionTitle, fontSize: 15 }}>📂 Артефакты модели</div>
+            <div style={{ ...s.sectionTitle, fontSize: 15 }}> Артефакты модели</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               {[
-                { file: 'overdue_model.pkl', desc: 'Обученный RandomForestClassifier', icon: '🌲' },
-                { file: 'overdue_scaler.pkl', desc: 'StandardScaler (fit на train)', icon: '⚖️' },
-                { file: 'overdue_features.pkl', desc: 'Список из 26 признаков (порядок)', icon: '📋' },
+                { file: 'overdue_model.pkl', desc: 'Обученный RandomForestClassifier', icon: '' },
+                { file: 'overdue_scaler.pkl', desc: 'StandardScaler (fit на train)', icon: '' },
+                { file: 'overdue_features.pkl', desc: 'Список из 26 признаков (порядок)', icon: '' },
               ].map(a => (
                 <div key={a.file} style={{ ...s.metricBox, textAlign: 'left' }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{a.icon}</div>
@@ -441,7 +441,7 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
           </div>
 
           <div style={{ marginTop: 24 }}>
-            <div style={{ ...s.sectionTitle, fontSize: 15 }}>🔄 Fallback: Rule-based эвристика</div>
+            <div style={{ ...s.sectionTitle, fontSize: 15 }}> Fallback: Rule-based эвристика</div>
             <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 12 }}>
               Если обученная модель не найдена на диске, используется детерминированная эвристика:
             </div>
@@ -466,7 +466,7 @@ risk_category:
       {/* =================== API =================== */}
       {activeTab === 'api' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🌐 REST API — Инференс модели</div>
+          <div style={s.sectionTitle}> REST API — Инференс модели</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Эндпоинт <span style={s.mono}>/api/overdue-prediction/</span> — прогнозирование риска просрочки для клиентов/кредитов.
           </div>
@@ -530,7 +530,7 @@ Response:
       {/* =================== RUN =================== */}
       {activeTab === 'run' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>▶️ Запуск обучения модели</div>
+          <div style={s.sectionTitle}> Запуск обучения модели</div>
 
           {/* DB Stats */}
           {dbStats && (
@@ -566,19 +566,19 @@ Response:
               onClick={handleTrain}
               disabled={training}
             >
-              {training ? '⏳ Обучение...' : '🚀 Запустить обучение модели'}
+              {training ? ' Обучение...' : ' Запустить обучение модели'}
             </button>
           </div>
 
           {trainError && (
             <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: '#f85149', fontSize: 13 }}>
-              ❌ {trainError}
+               {trainError}
             </div>
           )}
 
           {trainingResult && (
             <div style={{ marginTop: 20 }}>
-              <div style={{ ...s.sectionTitle, fontSize: 15 }}>📊 Результаты обучения</div>
+              <div style={{ ...s.sectionTitle, fontSize: 15 }}> Результаты обучения</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
                 <div style={s.metricBox}>
                   <div style={s.metricValue}>{(trainingResult.accuracy * 100).toFixed(1)}%</div>

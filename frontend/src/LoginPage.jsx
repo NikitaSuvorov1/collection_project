@@ -1,52 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const API_BASE = 'http://localhost:8000/api';
 
+const TRANSLIT = {
+  'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
+  'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
+  'п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts',
+  'ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+};
+
+function translit(str) {
+  return str.toLowerCase().split('').map(c => TRANSLIT[c] ?? c).join('');
+}
+
+/** "Суворов Никита Дмитриевич" → "suvorovnd" */
+function makeLogin(fullName) {
+  const parts = (fullName || '').trim().split(/\s+/);
+  if (parts.length < 2) return translit(parts[0] || '');
+  const surname = translit(parts[0]);
+  const initials = parts.slice(1).map(p => translit(p[0] || '')).join('');
+  return surname + initials;
+}
+
 export default function LoginPage({ onLogin }) {
-  const [operators, setOperators] = useState([]);
-  const [selectedOperator, setSelectedOperator] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  // Load operators from DB
-  useEffect(() => {
-    loadOperators();
-  }, []);
-
-  const loadOperators = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/operators/`);
-      const data = await res.json();
-      const ops = data.results || data;
-      setOperators(ops);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load operators:', err);
-      // Fallback to mock data
-      setOperators([
-        { id: 1, full_name: 'Иванов Иван', role: 'operator' },
-        { id: 2, full_name: 'Петрова Мария', role: 'operator' },
-        { id: 3, full_name: 'Сидоров Алексей', role: 'senior_operator' },
-      ]);
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Admin login — use first real operator ID for API calls
-    if (selectedOperator === 'admin') {
+    if (!login.trim() || !password.trim()) {
+      setError('Введите логин и пароль');
+      return;
+    }
+
+    // Admin login
+    if (login.trim().toLowerCase() === 'admin') {
       if (password === 'admin') {
-        const firstOp = operators.length > 0 ? operators[0] : null;
-        onLogin({ 
-          id: firstOp ? firstOp.id : 51, 
-          name: 'Администратор', 
-          full_name: 'Администратор системы',
-          role: 'manager' 
-        });
+        setLoading(true);
+        try {
+          const res = await fetch(`${API_BASE}/operators/`);
+          const data = await res.json();
+          const ops = data.results || data;
+          const firstOp = ops.length > 0 ? ops[0] : null;
+          onLogin({
+            id: firstOp ? firstOp.id : 51,
+            name: 'Администратор',
+            full_name: 'Администратор системы',
+            role: 'manager'
+          });
+        } catch {
+          onLogin({ id: 51, name: 'Администратор', full_name: 'Администратор системы', role: 'manager' });
+        } finally {
+          setLoading(false);
+        }
         return;
       } else {
         setError('Неверный пароль');
@@ -54,9 +64,24 @@ export default function LoginPage({ onLogin }) {
       }
     }
 
-    // Operator login (password = "1" for demo)
-    const operator = operators.find(o => o.id === parseInt(selectedOperator));
-    if (operator) {
+    // Operator login — search by full_name or ID
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/operators/`);
+      const data = await res.json();
+      const ops = data.results || data;
+      const input = login.trim().toLowerCase();
+      const operator = ops.find(o => {
+        const genLogin = makeLogin(o.full_name);
+        return genLogin === input || o.id.toString() === input;
+      });
+
+      if (!operator) {
+        setError('Пользователь не найден');
+        setLoading(false);
+        return;
+      }
+
       if (password === '1' || password === operator.id.toString()) {
         onLogin({
           id: operator.id,
@@ -65,10 +90,12 @@ export default function LoginPage({ onLogin }) {
           role: operator.role || 'operator'
         });
       } else {
-        setError('Неверный пароль (подсказка: 1)');
+        setError('Неверный пароль');
       }
-    } else {
-      setError('Выберите оператора');
+    } catch {
+      setError('Ошибка подключения к серверу');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,28 +112,17 @@ export default function LoginPage({ onLogin }) {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>
-              Пользователь
+              Логин
             </label>
-            {loading ? (
-              <div className="muted">Загрузка операторов...</div>
-            ) : (
-              <select
-                className="search"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px' }}
-                value={selectedOperator}
-                onChange={e => setSelectedOperator(e.target.value)}
-              >
-                <option value="">-- Выберите --</option>
-                <option value="admin">👑 Руководитель (admin)</option>
-                <optgroup label="Операторы">
-                  {operators.slice(0, 15).map(op => (
-                    <option key={op.id} value={op.id}>
-                      {op.full_name} {op.role === 'senior_operator' ? '(старший)' : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            )}
+            <input
+              type="text"
+              className="search"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+              value={login}
+              onChange={e => setLogin(e.target.value)}
+              placeholder="suvorovnd"
+              autoFocus
+            />
           </div>
           
           <div>
@@ -129,16 +145,10 @@ export default function LoginPage({ onLogin }) {
             </div>
           )}
           
-          <button type="submit" className="btn large" disabled={!selectedOperator}>
-            Войти
+          <button type="submit" className="btn large" disabled={loading || !login.trim()}>
+            {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-        
-        <div className="muted" style={{ marginTop: 20, textAlign: 'center', fontSize: 12 }}>
-          <strong>Демо-доступ:</strong><br />
-          Руководитель: admin / admin<br />
-          Операторы: выберите из списка, пароль: 1
-        </div>
       </div>
     </div>
   );

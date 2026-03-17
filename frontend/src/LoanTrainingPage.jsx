@@ -5,7 +5,7 @@ const API = 'http://127.0.0.1:8000/api';
 /* ===== Признаки модели ===== */
 const FEATURE_GROUPS = [
   {
-    title: '👤 Демографические',
+    title: ' Демографические',
     features: [
       { name: 'age', label: 'Возраст', source: 'CreditApplication.birth_date', transform: '(today − birth_date).days / 365.25', type: 'float' },
       { name: 'gender', label: 'Пол', source: 'CreditApplication.gender', transform: 'M → 1, F → 0', type: 'int (0/1)' },
@@ -18,7 +18,7 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '💼 Занятость и стаж',
+    title: ' Занятость и стаж',
     features: [
       { name: 'empl_self_employed', label: 'Самозанятый', source: 'CreditApplication.employment_type', transform: 'one-hot', type: 'int (0/1)' },
       { name: 'empl_business', label: 'Бизнес', source: 'CreditApplication.employment_type', transform: 'one-hot: business_owner → 1', type: 'int (0/1)' },
@@ -33,7 +33,7 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '💰 Финансовые',
+    title: ' Финансовые',
     features: [
       { name: 'total_income', label: 'Совокупный доход', source: 'income_main + additional + rental + pension + other', transform: 'Σ 5 источников', type: 'float (₽)' },
       { name: 'total_expenses', label: 'Совокупные расходы', source: 'expense_rent + utilities + food + transport + other + loans', transform: 'Σ 6 компонент', type: 'float (₽)' },
@@ -45,7 +45,7 @@ const FEATURE_GROUPS = [
     ],
   },
   {
-    title: '🏠 Имущество и кредитная история',
+    title: ' Имущество и кредитная история',
     features: [
       { name: 'has_collateral', label: 'Наличие залога', source: 'CreditApplication.has_collateral', transform: 'bool → int', type: 'int (0/1)' },
       { name: 'has_guarantor', label: 'Наличие поручителя', source: 'CreditApplication.has_guarantor', transform: 'bool → int', type: 'int (0/1)' },
@@ -64,67 +64,67 @@ const TOTAL_FEATURES = FEATURE_GROUPS.reduce((s, g) => s + g.features.length, 0)
 
 const PIPELINE_STEPS = [
   {
-    step: 1, title: 'Сбор данных', icon: '📥',
+    step: 1, title: 'Сбор данных', icon: '',
     desc: 'Загрузка реальных заявок из таблицы CreditApplication (с решениями approved/rejected) и генерация синтетических примеров из таблиц Client + Credit.',
     detail: 'Реальные заявки: из CreditApplication где decision ∈ {approved, rejected}.\nСинтетические: для каждого клиента генерируется случайная «заявка» на основе его реального профиля (доход, расходы, занятость, кредитная история).\nМинимум записей задаётся параметром --samples (по умолчанию 1500).',
     command: 'python manage.py train_approval_model --samples 1500',
   },
   {
-    step: 2, title: 'Инженерия признаков', icon: '🔧',
+    step: 2, title: 'Инженерия признаков', icon: '',
     desc: `Извлечение ${TOTAL_FEATURES} числовых признаков из данных заявки. Категориальные переменные кодируются двумя способами: One-Hot и Ordinal.`,
     detail: 'One-Hot encoding: marital_status → 4 бинарных (married, divorced, widowed, civil)\nOne-Hot encoding: employment_type → 8 бинарных (self_employed, business, freelance, retired, unemployed, military, civil_servant, student)\nОпорный уровень (base): single (marital), employed (employment) — не кодируется\nOrdinal: education (0–5), income_confirmation (0–4), property_ownership (0–4)\nПроизводные: dti_ratio, monthly_payment_est, total_income, total_expenses',
     command: null,
   },
   {
-    step: 3, title: 'Разметка целевой переменной', icon: '🏷️',
+    step: 3, title: 'Разметка целевой переменной', icon: '',
     desc: 'Бинарная классификация: y = 1 (одобрено), y = 0 (отказ).',
     detail: 'Для реальных заявок: decision="approved" → 1, "rejected" → 0\n\nДля синтетических: скоринг approval_score по правилам:\n  + 2.0  нет просрочек\n  − 1.5  есть просрочки\n  + 1.5  DTI < 0.3\n  − 3.5  DTI > 1.0\n  − 5.0  расходы > дохода\n  + 1.0  employed/military/civil_servant\n  − 2.0  unemployed/student\n  + шум N(0, 0.6)\n\nОдобрено если approval_score > 0.5',
     command: null,
   },
   {
-    step: 4, title: 'Нормализация (StandardScaler)', icon: '⚖️',
+    step: 4, title: 'Нормализация (StandardScaler)', icon: '',
     desc: `Приведение всех ${TOTAL_FEATURES} признаков к единому масштабу: μ = 0, σ = 1.`,
     detail: 'StandardScaler из sklearn.preprocessing. Fit только на train-выборке. Transform — на обеих частях, чтобы не допустить data leakage.',
     command: null,
   },
   {
-    step: 5, title: 'Разделение выборки', icon: '✂️',
+    step: 5, title: 'Разделение выборки', icon: '',
     desc: 'Стратифицированное разбиение 75% / 25% (train / test).',
     detail: 'train_test_split с test_size=0.25, stratify=y (сохранение пропорций классов), random_state=42 для воспроизводимости.',
     command: null,
   },
   {
-    step: 6, title: 'Обучение GradientBoostingClassifier', icon: '🌳',
+    step: 6, title: 'Обучение GradientBoostingClassifier', icon: '',
     desc: 'Градиентный бустинг: последовательное построение 200 деревьев решений, каждое исправляет ошибки предыдущих.',
     detail: 'n_estimators=200, learning_rate=0.1, max_depth=5, min_samples_split=10, min_samples_leaf=5, subsample=0.8 (стохастический бустинг), random_state=42.',
     command: null,
   },
   {
-    step: 7, title: 'Кросс-валидация (5-fold)', icon: '🔄',
+    step: 7, title: 'Кросс-валидация (5-fold)', icon: '',
     desc: 'Оценка устойчивости модели методом 5-fold cross-validation на полном датасете.',
     detail: 'cross_val_score с scoring="accuracy". Среднее и стандартное отклонение по 5 фолдам. Модель обучается на нормализованных данных.',
     command: null,
   },
   {
-    step: 8, title: 'Оценка качества', icon: '📈',
+    step: 8, title: 'Оценка качества', icon: '',
     desc: 'Метрики: Accuracy, ROC-AUC, Precision, Recall, F1-score по каждому классу, матрица ошибок.',
     detail: 'classification_report с target_names=["Отказ", "Одобрено"].\nROC-AUC вычисляется по predict_proba.\nFeature importances из модели GradientBoosting.\nConfusion matrix для анализа ошибок первого и второго рода.',
     command: null,
   },
   {
-    step: 9, title: 'Постобработка (бизнес-правила)', icon: '📋',
+    step: 9, title: 'Постобработка (бизнес-правила)', icon: '',
     desc: 'Жёсткие правила кредитной политики, которые переопределяют решение ML-модели.',
     detail: 'Hard reject (автоматический отказ):\n  • Расходы ≥ дохода\n  • DTI > 80% (порог ЦБ РФ)\n  • Нулевой доход\n  • Платёж > 50% дохода\n  • Доход на члена семьи < прожиточного минимума (17 000 ₽)\n\nDTO-штрафы (корректировка вероятности):\n  • DTI > 1.0 → penalty до −80%\n  • DTI > 0.7 → penalty до −70%\n  • DTI > 0.5 → penalty −15%\n\nШтраф за ≥5 иждивенцев: −30%\nШтраф за ≥3 иждивенцев: −10%',
     command: null,
   },
   {
-    step: 10, title: 'Сохранение модели', icon: '💾',
+    step: 10, title: 'Сохранение модели', icon: '',
     desc: 'Сериализация обученной модели, скейлера и списка признаков в .pkl файлы.',
     detail: 'Файлы: approval_model.pkl, approval_scaler.pkl, approval_features.pkl.\nДиректория: backend/collection_app/ml/saved_models/',
     command: null,
   },
   {
-    step: 11, title: 'Инференс (Prediction API)', icon: '🎯',
+    step: 11, title: 'Инференс (Prediction API)', icon: '',
     desc: 'Применение обученной модели к новым заявкам через REST API.',
     detail: 'POST /api/applications/predict_approval/ — произвольные данные\nPOST /api/applications/{id}/process_application/ — существующая заявка из БД\n\nЕсли модель не обучена → rule-based fallback.\nЕсли жёсткие правила сработали → rule_override (без ML).',
     command: null,
@@ -236,18 +236,18 @@ export default function LoanTrainingPage() {
   };
 
   const TABS = [
-    { key: 'pipeline', label: '🔄 Пайплайн обучения' },
-    { key: 'features', label: `📋 Признаки (${TOTAL_FEATURES})` },
-    { key: 'target', label: '🏷️ Целевая переменная' },
-    { key: 'model', label: '🌳 Модель и гиперпараметры' },
-    { key: 'rules', label: '📋 Бизнес-правила' },
-    { key: 'api', label: '🌐 API инференса' },
-    { key: 'run', label: '▶️ Запуск обучения' },
+    { key: 'pipeline', label: ' Пайплайн обучения' },
+    { key: 'features', label: ` Признаки (${TOTAL_FEATURES})` },
+    { key: 'target', label: ' Целевая переменная' },
+    { key: 'model', label: ' Модель и гиперпараметры' },
+    { key: 'rules', label: ' Бизнес-правила' },
+    { key: 'api', label: ' API инференса' },
+    { key: 'run', label: ' Запуск обучения' },
   ];
 
   return (
     <div style={s.page}>
-      <h1 style={s.h1}>🏦 Обучение модели одобрения кредитных заявок</h1>
+      <h1 style={s.h1}> Обучение модели одобрения кредитных заявок</h1>
       <div style={s.subtitle}>
         Бинарная классификация: одобрение / отказ • GradientBoostingClassifier • {TOTAL_FEATURES} признаков • Жёсткие бизнес-правила
       </div>
@@ -263,7 +263,7 @@ export default function LoanTrainingPage() {
       {/* =================== PIPELINE =================== */}
       {activeTab === 'pipeline' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🔄 Пайплайн обучения модели</div>
+          <div style={s.sectionTitle}> Пайплайн обучения модели</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {PIPELINE_STEPS.map((step, i) => (
               <React.Fragment key={step.step}>
@@ -291,7 +291,7 @@ export default function LoanTrainingPage() {
       {/* =================== FEATURES =================== */}
       {activeTab === 'features' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>📋 Вектор признаков — {TOTAL_FEATURES} features</div>
+          <div style={s.sectionTitle}> Вектор признаков — {TOTAL_FEATURES} features</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Каждая кредитная заявка преобразуется в числовой вектор из {TOTAL_FEATURES} признаков. Категориальные переменные кодируются через One-Hot (семейное положение, тип занятости) и Ordinal encoding (образование, подтверждение дохода, жилищные условия).
           </div>
@@ -321,7 +321,7 @@ export default function LoanTrainingPage() {
           ))}
 
           <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-            💡 Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1). Опорные уровни (base): <span style={s.mono}>single</span> для family, <span style={s.mono}>employed</span> для employment — не кодируются (предотвращение мультиколлинеарности).
+             Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1). Опорные уровни (base): <span style={s.mono}>single</span> для family, <span style={s.mono}>employed</span> для employment — не кодируются (предотвращение мультиколлинеарности).
           </div>
         </div>
       )}
@@ -329,15 +329,15 @@ export default function LoanTrainingPage() {
       {/* =================== TARGET =================== */}
       {activeTab === 'target' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🏷️ Целевая переменная — decision</div>
+          <div style={s.sectionTitle}> Целевая переменная — decision</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Бинарная классификация: одобрение или отказ в выдаче кредита.
           </div>
 
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             {[
-              { cls: 1, label: 'Одобрено (approved)', color: '#3fb950', bg: 'rgba(63,185,80,0.15)', icon: '✅' },
-              { cls: 0, label: 'Отказано (rejected)', color: '#f85149', bg: 'rgba(248,81,73,0.15)', icon: '❌' },
+              { cls: 1, label: 'Одобрено (approved)', color: '#3fb950', bg: 'rgba(63,185,80,0.15)', icon: '' },
+              { cls: 0, label: 'Отказано (rejected)', color: '#f85149', bg: 'rgba(248,81,73,0.15)', icon: '' },
             ].map(r => (
               <div key={r.cls} style={{ flex: 1, background: r.bg, border: `1px solid ${r.color}40`, borderRadius: 10, padding: 20, textAlign: 'center' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{r.icon}</div>
@@ -390,7 +390,7 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
       {/* =================== MODEL =================== */}
       {activeTab === 'model' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🌳 GradientBoostingClassifier — гиперпараметры</div>
+          <div style={s.sectionTitle}> GradientBoostingClassifier — гиперпараметры</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Ансамблевый метод: последовательное построение деревьев решений, каждое дерево корректирует ошибки предыдущих (градиентный бустинг).
           </div>
@@ -415,12 +415,12 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
           </table>
 
           <div style={{ marginTop: 24 }}>
-            <div style={{ ...s.sectionTitle, fontSize: 15 }}>📂 Артефакты модели</div>
+            <div style={{ ...s.sectionTitle, fontSize: 15 }}> Артефакты модели</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               {[
-                { file: 'approval_model.pkl', desc: 'Обученный GradientBoostingClassifier', icon: '🌳' },
-                { file: 'approval_scaler.pkl', desc: 'StandardScaler (fit на train)', icon: '⚖️' },
-                { file: 'approval_features.pkl', desc: `Список из ${TOTAL_FEATURES} признаков (порядок)`, icon: '📋' },
+                { file: 'approval_model.pkl', desc: 'Обученный GradientBoostingClassifier', icon: '' },
+                { file: 'approval_scaler.pkl', desc: 'StandardScaler (fit на train)', icon: '' },
+                { file: 'approval_features.pkl', desc: `Список из ${TOTAL_FEATURES} признаков (порядок)`, icon: '' },
               ].map(a => (
                 <div key={a.file} style={{ ...s.metricBox, textAlign: 'left' }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{a.icon}</div>
@@ -435,7 +435,7 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
           </div>
 
           <div style={{ marginTop: 24 }}>
-            <div style={{ ...s.sectionTitle, fontSize: 15 }}>🔄 Fallback: Rule-based эвристика</div>
+            <div style={{ ...s.sectionTitle, fontSize: 15 }}> Fallback: Rule-based эвристика</div>
             <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 12 }}>
               Если обученная модель не найдена на диске, используется детерминированная эвристика:
             </div>
@@ -470,7 +470,7 @@ decision = "approved" если score ≥ 0.5`}</div>
       {/* =================== BUSINESS RULES =================== */}
       {activeTab === 'rules' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>📋 Жёсткие бизнес-правила (Hard Reject)</div>
+          <div style={s.sectionTitle}> Жёсткие бизнес-правила (Hard Reject)</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Правила кредитной политики, которые срабатывают <strong style={{ color: '#e6edf3' }}>до</strong> ML-модели и автоматически отклоняют заявку вне зависимости от прогноза. Тип модели в ответе: <span style={s.mono}>rule_override</span>.
           </div>
@@ -478,7 +478,7 @@ decision = "approved" если score ≥ 0.5`}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
             {HARD_REJECT_RULES.map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, padding: '12px 16px' }}>
-                <span style={s.badge(r.color, r.color + '20')}>⛔</span>
+                <span style={s.badge(r.color, r.color + '20')}></span>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: '#e6edf3', fontWeight: 500, fontSize: 14 }}>{r.rule}</div>
                   <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#8b949e', marginTop: 2 }}>{r.condition}</div>
@@ -518,7 +518,7 @@ decision = "approved" если approved_prob ≥ 0.5`}</div>
       {/* =================== API =================== */}
       {activeTab === 'api' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>🌐 REST API — Инференс модели</div>
+          <div style={s.sectionTitle}> REST API — Инференс модели</div>
           <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
             Два эндпоинта для прогнозирования одобрения кредитных заявок.
           </div>
@@ -585,7 +585,7 @@ Response:
           ))}
 
           <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(210,153,34,0.1)', border: '1px solid rgba(210,153,34,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-            ⚠️ Поле <span style={s.mono}>model_type</span> в ответе: <strong style={{ color: '#e6edf3' }}>gradient_boosting</strong> — решение ML-модели,{' '}
+             Поле <span style={s.mono}>model_type</span> в ответе: <strong style={{ color: '#e6edf3' }}>gradient_boosting</strong> — решение ML-модели,{' '}
             <strong style={{ color: '#d29922' }}>rule_override</strong> — жёсткие бизнес-правила,{' '}
             <strong style={{ color: '#8b949e' }}>rule_based</strong> — fallback (модель не обучена).
           </div>
@@ -595,7 +595,7 @@ Response:
       {/* =================== RUN =================== */}
       {activeTab === 'run' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>▶️ Запуск обучения модели</div>
+          <div style={s.sectionTitle}> Запуск обучения модели</div>
 
           {dbStats && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
@@ -632,19 +632,19 @@ Response:
               onClick={handleTrain}
               disabled={training}
             >
-              {training ? '⏳ Обучение...' : '🚀 Запустить обучение модели'}
+              {training ? ' Обучение...' : ' Запустить обучение модели'}
             </button>
           </div>
 
           {trainError && (
             <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: '#f85149', fontSize: 13 }}>
-              ❌ {trainError}
+               {trainError}
             </div>
           )}
 
           {trainingResult && (
             <div style={{ marginTop: 20 }}>
-              <div style={{ ...s.sectionTitle, fontSize: 15 }}>📊 Результаты обучения</div>
+              <div style={{ ...s.sectionTitle, fontSize: 15 }}> Результаты обучения</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
                 {[
                   { label: 'Accuracy', value: trainingResult.accuracy, fmt: v => (v * 100).toFixed(1) + '%' },

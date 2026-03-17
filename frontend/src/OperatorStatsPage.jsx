@@ -10,11 +10,11 @@ const fmtDur = (sec) => {
 };
 
 const STATUS_LABELS = {
-  promise: '🤝 Обещание',
-  no_answer: '📵 Не дозвон',
-  refuse: '❌ Отказ',
-  completed: '✅ Завершено',
-  callback: '🔄 Перезвонить',
+  promise: ' Обещание',
+  no_answer: ' Не дозвон',
+  refuse: ' Отказ',
+  completed: ' Завершено',
+  callback: ' Перезвонить',
 };
 const STATUS_COLORS = {
   promise: '#16a34a',
@@ -84,14 +84,14 @@ export default function OperatorStatsPage({ user, onBack }) {
 
   if (loading) return (
     <div style={{ padding: 40, textAlign: 'center' }}>
-      <div style={{ fontSize: 48 }}>⏳</div>
+      <div style={{ fontSize: 48 }}></div>
       <div style={{ marginTop: 12, color: '#8b949e' }}>Загрузка статистики...</div>
     </div>
   );
 
   if (error) return (
     <div style={{ padding: 40, textAlign: 'center' }}>
-      <div style={{ fontSize: 48 }}>⚠️</div>
+      <div style={{ fontSize: 48 }}></div>
       <div style={{ marginTop: 12, color: '#f85149' }}>Ошибка: {error}</div>
       <button className="btn" style={{ marginTop: 12 }} onClick={onBack}>← Назад</button>
     </div>
@@ -108,9 +108,9 @@ export default function OperatorStatsPage({ user, onBack }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button className="btn ghost" onClick={onBack} style={{ fontSize: 14 }}>← Назад</button>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>📊 Моя статистика</h2>
+            <h2 style={{ margin: 0, fontSize: 22 }}> Моя статистика</h2>
             <div style={{ fontSize: 13, color: '#8b949e', marginTop: 2 }}>
-              {data.operator.name} • {data.operator.role} • {data.operator.specialization}
+              {user.full_name || user.name} • {data.operator.role} • {data.operator.specialization}
               {data.operator.hireDate && <span> • С {new Date(data.operator.hireDate).toLocaleDateString('ru-RU')}</span>}
             </div>
           </div>
@@ -128,19 +128,19 @@ export default function OperatorStatsPage({ user, onBack }) {
 
       {/* KPI Row */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <KpiCard icon="📞" label="Звонков" value={stats.calls} sub={`Всего воздействий: ${stats.total}`} />
-        <KpiCard icon="📡" label="Контактность" value={`${stats.contactRate}%`}
+        <KpiCard icon="" label="Звонков" value={stats.calls} sub={`Всего воздействий: ${stats.total}`} />
+        <KpiCard icon="" label="Контактность" value={`${stats.contactRate}%`}
           sub={`${stats.contacts} из ${stats.calls} дозвонов`}
           color={stats.contactRate >= 50 ? '#16a34a' : stats.contactRate >= 30 ? '#d97706' : '#f85149'} />
-        <KpiCard icon="🤝" label="Обещаний (PTP)" value={stats.promises}
+        <KpiCard icon="" label="Обещаний (PTP)" value={stats.promises}
           sub={fmt(stats.promiseAmount)}
           color="#16a34a" />
-        <KpiCard icon="⏱" label="Ср. длительность" value={fmtDur(stats.avgDuration)}
+        <KpiCard icon="" label="Ср. длительность" value={fmtDur(stats.avgDuration)}
           sub={`Общее время: ${fmtDur(stats.totalDuration)}`} />
-        <KpiCard icon="❌" label="Отказов" value={stats.refusals}
+        <KpiCard icon="" label="Отказов" value={stats.refusals}
           sub={`Не дозвон: ${stats.noAnswer}`}
           color="#f85149" />
-        <KpiCard icon="📋" label="В очереди" value={data.activeAssignments}
+        <KpiCard icon="" label="В очереди" value={data.activeAssignments}
           sub="Активных назначений" />
       </div>
 
@@ -148,7 +148,7 @@ export default function OperatorStatsPage({ user, onBack }) {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 20 }}>
         {/* Daily chart */}
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16 }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>📈 Динамика звонков (30 дней)</h4>
+          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}> Динамика звонков (30 дней)</h4>
           {data.daily.length > 0 ? (
             <MiniBar data={data.daily} labelKey="date" valueKey="calls" color="#3b82f6" height={160} />
           ) : (
@@ -164,7 +164,7 @@ export default function OperatorStatsPage({ user, onBack }) {
 
         {/* Status distribution */}
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16 }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>📊 Распределение статусов (месяц)</h4>
+          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}> Распределение статусов (месяц)</h4>
           {data.statusDistribution.length > 0 ? (
             <div>
               {data.statusDistribution.map((s, i) => {
@@ -199,7 +199,7 @@ export default function OperatorStatsPage({ user, onBack }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Hourly distribution */}
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16 }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>🕐 Активность по часам (месяц)</h4>
+          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}> Активность по часам (месяц)</h4>
           {data.hourly.length > 0 ? (
             <MiniBar data={data.hourly} labelKey="hour" valueKey="calls" color="#8b5cf6" height={120} />
           ) : (
@@ -209,7 +209,7 @@ export default function OperatorStatsPage({ user, onBack }) {
 
         {/* Top promises */}
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16 }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>💰 Крупнейшие обещания (месяц)</h4>
+          <h4 style={{ margin: '0 0 12px', fontSize: 14 }}> Крупнейшие обещания (месяц)</h4>
           {data.topPromises.length > 0 ? (
             <div style={{ maxHeight: 200, overflowY: 'auto' }}>
               {data.topPromises.map((p, i) => (
@@ -240,9 +240,9 @@ export default function OperatorStatsPage({ user, onBack }) {
         marginTop: 20, background: '#1c2128', border: '1px solid #30363d', borderRadius: 10,
         padding: '12px 20px', display: 'flex', gap: 32, fontSize: 13, color: '#8b949e',
       }}>
-        <span>📦 За всё время: <b>{data.allTime.totalInterventions}</b> воздействий</span>
-        <span>💰 Собрано: <b>{fmt(data.allTime.totalCollected)}</b></span>
-        <span>🎯 Успешность: <b>{Math.round(data.allTime.successRate * 100)}%</b></span>
+        <span> За всё время: <b>{data.allTime.totalInterventions}</b> воздействий</span>
+        <span> Собрано: <b>{fmt(data.allTime.totalCollected)}</b></span>
+        <span> Успешность: <b>{Math.round(data.allTime.successRate * 100)}%</b></span>
       </div>
     </div>
   );
