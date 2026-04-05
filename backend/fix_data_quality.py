@@ -156,11 +156,29 @@ def rebuild_credit_states():
                 month_penalty = (overdue_principal + overdue_interest) * daily_penalty_rate * 30
                 penalties += month_penalty
 
-                # Sometimes partial payments reduce overdue a little
+                # Sometimes partial payments reduce overdue (ст. 319 ГК РФ)
+                # Priority: penalties → overdue interest → overdue principal
                 if random.random() < 0.2:
                     partial = random.uniform(0.1, 0.4) * monthly_pmt
-                    overdue_principal = max(0, overdue_principal - partial * 0.7)
-                    overdue_interest = max(0, overdue_interest - partial * 0.3)
+                    remaining_pmt = partial
+
+                    # 1. Penalties first
+                    if remaining_pmt > 0 and penalties > 0:
+                        pay_pen = min(remaining_pmt, penalties)
+                        penalties -= pay_pen
+                        remaining_pmt -= pay_pen
+
+                    # 2. Overdue interest
+                    if remaining_pmt > 0 and overdue_interest > 0:
+                        pay_int = min(remaining_pmt, overdue_interest)
+                        overdue_interest -= pay_int
+                        remaining_pmt -= pay_int
+
+                    # 3. Overdue principal
+                    if remaining_pmt > 0 and overdue_principal > 0:
+                        pay_princ = min(remaining_pmt, overdue_principal)
+                        overdue_principal -= pay_princ
+                        remaining_pmt -= pay_princ
             else:
                 # Normal payment - principal reduces
                 interest_portion = month_interest

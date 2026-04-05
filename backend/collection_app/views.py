@@ -46,7 +46,10 @@ class ClientViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def profile_360(self, request, pk=None):
         """Полный 360° портрет клиента"""
-        client = self.get_object()
+        client = Client.objects.prefetch_related(
+            'credits__states', 'credits__payments', 'credits__interventions',
+            'credits__forecasts', 'interventions__operator',
+        ).select_related('behavior_profile').get(pk=pk)
         serializer = Client360Serializer(client)
         return Response(serializer.data)
     
@@ -78,7 +81,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 
 
 class CreditViewSet(viewsets.ModelViewSet):
-    queryset = Credit.objects.select_related('client').all()
+    queryset = Credit.objects.select_related('client').prefetch_related('states').all()
     serializer_class = CreditSerializer
     permission_classes = [permissions.AllowAny]
     
@@ -288,7 +291,7 @@ class ScoringResultViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AssignmentViewSet(viewsets.ModelViewSet):
-    queryset = Assignment.objects.select_related('credit__client', 'operator').all()
+    queryset = Assignment.objects.select_related('credit__client', 'operator').prefetch_related('credit__interventions').all()
     serializer_class = AssignmentSerializer
     permission_classes = [permissions.AllowAny]
     
@@ -537,17 +540,27 @@ class OverduePredictionView(APIView):
         top_n = int(request.data.get('top', 50))
 
         if credit_ids:
-            credits = Credit.objects.filter(id__in=credit_ids).select_related('client')
+            credits = Credit.objects.filter(id__in=credit_ids).select_related('client').prefetch_related('payments', 'interventions')
         else:
-            # По умолчанию: все активные/просроченные
             credits = Credit.objects.filter(
                 status__in=['active', 'overdue', 'restructured']
-            ).select_related('client')[:top_n * 2]
+            ).select_related('client').prefetch_related('payments', 'interventions')[:top_n * 2]
+
+        # Предвычисляем other_credits_count для каждого клиента одним запросом
+        client_ids = set(c.client_id for c in credits)
+        from django.db.models import Count as _Count
+        client_credit_counts = dict(
+            Credit.objects.filter(client_id__in=client_ids)
+            .values('client_id')
+            .annotate(cnt=_Count('id'))
+            .values_list('client_id', 'cnt')
+        )
 
         records = []
         client_names = {}
         for c in credits:
-            f = self._build_features(c)
+            occ = (client_credit_counts.get(c.client_id, 1) - 1)
+            f = self._build_features(c, other_credits_count=occ)
             f['client_id'] = c.client.id
             f['credit_id'] = c.id
             records.append(f)
@@ -566,8 +579,13 @@ class OverduePredictionView(APIView):
         })
 
     @staticmethod
-    def _build_features(credit) -> dict:
-        """Собирает вектор признаков из Credit → Client, Payment, Intervention."""
+    def _build_features(credit, other_credits_count=None) -> dict:
+        """Собирает вектор признаков из Credit → Client, Payment, Intervention.
+        
+        Args:
+            credit: Credit instance (с prefetched payments/interventions для скорости).
+            other_credits_count: если передан, не делает доп. запрос к БД.
+        """
         from datetime import date as dt_date
         from django.db.models import Avg, Max, Count, Q
         from datetime import timedelta
@@ -576,8 +594,9 @@ class OverduePredictionView(APIView):
         today = dt_date.today()
         year_ago = today - timedelta(days=365)
 
-        payments = credit.payments.all()
-        interventions = credit.interventions.all()
+        # Используем prefetched данные — без доп. запросов
+        payments = list(credit.payments.all())
+        interventions = list(credit.interventions.all())
 
         # Клиент
         age = (today - client.birth_date).days / 365.25 if client.birth_date else 35
@@ -586,7 +605,8 @@ class OverduePredictionView(APIView):
         empl_map = {'employed': 1, 'self_employed': 2, 'unemployed': 0, 'retired': 3, 'student': 4}
 
         monthly_income = float(client.income) if client.income else 0
-        other_count = Credit.objects.filter(client=client).exclude(id=credit.id).count()
+        if other_credits_count is None:
+            other_credits_count = Credit.objects.filter(client=client).exclude(id=credit.id).count()
 
         # Кредит
         credit_amount = float(credit.principal_amount) if credit.principal_amount else 0
@@ -598,21 +618,21 @@ class OverduePredictionView(APIView):
         credit_age = (today - credit.open_date).days if credit.open_date else 0
         status_map = {'active': 1, 'closed': 0, 'overdue': 2, 'default': 3, 'restructured': 4, 'legal': 5, 'sold': 6, 'written_off': 7}
 
-        # Платежи
-        total_p = payments.count()
-        overdue_p = payments.filter(overdue_days__gt=0).count()
-        max_od = payments.aggregate(m=Max('overdue_days'))['m'] or 0
-        avg_pay = payments.aggregate(a=Avg('amount'))['a'] or 0
-        p12 = payments.filter(payment_date__gte=year_ago)
-        p12_cnt = p12.count()
-        od12_cnt = p12.filter(overdue_days__gt=0).count()
+        # Платежи — in-memory (из prefetched списка)
+        total_p = len(payments)
+        overdue_p = sum(1 for p in payments if (p.overdue_days or 0) > 0)
+        max_od = max((p.overdue_days or 0 for p in payments), default=0)
+        avg_pay = sum(float(p.amount or 0) for p in payments) / total_p if total_p > 0 else 0
+        p12 = [p for p in payments if p.payment_date and p.payment_date >= year_ago]
+        p12_cnt = len(p12)
+        od12_cnt = sum(1 for p in p12 if (p.overdue_days or 0) > 0)
         od12_share = od12_cnt / p12_cnt if p12_cnt > 0 else 0
-        max_od_12 = p12.aggregate(m=Max('overdue_days'))['m'] or 0
+        max_od_12 = max((p.overdue_days or 0 for p in p12), default=0)
 
-        # Взаимодействие
-        total_iv = interventions.count()
-        compl_iv = interventions.filter(status='completed').count()
-        promises = interventions.filter(status='promise').count()
+        # Взаимодействие — in-memory
+        total_iv = len(interventions)
+        compl_iv = sum(1 for iv in interventions if iv.status == 'completed')
+        promises = sum(1 for iv in interventions if iv.status == 'promise')
 
         return {
             'age': age,
@@ -621,8 +641,8 @@ class OverduePredictionView(APIView):
             'employment': empl_map.get(client.employment, 1),
             'dependents': client.children_count or 0,
             'monthly_income': monthly_income,
-            'has_other_credits': 1 if other_count > 0 else 0,
-            'other_credits_count': other_count,
+            'has_other_credits': 1 if other_credits_count > 0 else 0,
+            'other_credits_count': other_credits_count,
             'credit_amount': credit_amount,
             'credit_term': credit_term,
             'interest_rate': interest_rate,
@@ -851,48 +871,42 @@ class DashboardFullView(APIView):
             datetime__date__gte=start_date
         ).select_related('operator', 'client', 'credit')
         
-        # === Статистика по операторам ===
-        operators = Operator.objects.all()
-        operator_stats = []
-        
-        for op in operators:
-            op_interventions = interventions.filter(operator=op)
-            total_calls = op_interventions.filter(intervention_type='phone').count()
-            contacts = op_interventions.filter(
+        # === Статистика по операторам (одним запросом через annotate) ===
+        operator_agg = Intervention.objects.filter(
+            datetime__date__gte=start_date,
+            operator__isnull=False,
+        ).values('operator__id', 'operator__full_name').annotate(
+            calls=Count('id', filter=Q(intervention_type='phone')),
+            contacts=Count('id', filter=Q(
                 intervention_type='phone',
-                status__in=['completed', 'promise', 'refuse', 'callback']
-            ).count()
-            ptp_count = op_interventions.filter(status='promise').count()
-            ptp_amount = op_interventions.filter(status='promise').aggregate(
-                total=Sum('promise_amount')
-            )['total'] or 0
-            
-            # Расчёт времени на звонках
-            total_duration = op_interventions.filter(intervention_type='phone').aggregate(
-                total=Sum('duration')
-            )['total'] or 0
-            
-            avg_duration = 0
-            if total_calls > 0:
-                avg_duration = total_duration // total_calls
-            
-            contact_rate = round((contacts / total_calls * 100), 1) if total_calls > 0 else 0
-            
-            # Время работы (эмуляция)
+                status__in=['completed', 'promise', 'refuse', 'callback'],
+            )),
+            ptp_count=Count('id', filter=Q(status='promise')),
+            ptp_amount=Sum('promise_amount', filter=Q(status='promise')),
+            total_duration=Sum('duration', filter=Q(intervention_type='phone')),
+        )
+
+        operator_stats = []
+        for row in operator_agg:
+            calls = row['calls'] or 0
+            contacts = row['contacts'] or 0
+            total_duration = row['total_duration'] or 0
+            avg_duration = total_duration // calls if calls > 0 else 0
+            contact_rate = round(contacts / calls * 100, 1) if calls > 0 else 0
             total_time_min = total_duration // 60
-            break_time_min = int(total_time_min * 0.12)  # ~12% на перерывы
-            
+            break_time_min = int(total_time_min * 0.12)
+
             operator_stats.append({
-                'id': op.id,
-                'name': op.full_name,
-                'calls': total_calls,
+                'id': row['operator__id'],
+                'name': row['operator__full_name'],
+                'calls': calls,
                 'contacts': contacts,
                 'contactRate': contact_rate,
                 'avgDuration': avg_duration,
                 'totalTime': total_time_min,
                 'breakTime': break_time_min,
-                'ptpCount': ptp_count,
-                'ptpAmount': float(ptp_amount),
+                'ptpCount': row['ptp_count'] or 0,
+                'ptpAmount': float(row['ptp_amount'] or 0),
             })
         
         # === Динамика звонков по дням ===
@@ -1593,18 +1607,31 @@ class PreOverdueMonitorView(APIView):
         horizon = today + timedelta(days=days_ahead)
 
         # Active/restructured credits (exclude already closed by planned_close_date)
-        credits = Credit.objects.filter(
+        credits = list(Credit.objects.filter(
             status__in=['active', 'overdue', 'restructured']
         ).exclude(
             planned_close_date__lt=today
-        ).select_related('client').prefetch_related('states', 'payments', 'interventions')
+        ).select_related('client').prefetch_related('states', 'payments', 'interventions')[:limit])
 
-        rows = []
-        for credit in credits[:limit]:
+        # Предвычисляем other_credits_count одним запросом
+        client_ids = set(c.client_id for c in credits)
+        from django.db.models import Count as _Count
+        client_credit_counts = dict(
+            Credit.objects.filter(client_id__in=client_ids)
+            .values('client_id')
+            .annotate(cnt=_Count('id'))
+            .values_list('client_id', 'cnt')
+        )
+
+        # Собираем features и делаем batch predict
+        credit_data = []  # (credit, latest_state, total_debt, overdue_days, next_payment_date)
+        records = []
+        for credit in credits:
             client = credit.client
 
-            # Latest state — check early to skip zero-debt credits
-            latest_state = credit.states.order_by('-state_date').first()
+            # Latest state — из prefetched (in-memory max по state_date)
+            states = list(credit.states.all())
+            latest_state = max(states, key=lambda s: s.state_date) if states else None
             overdue_days = latest_state.overdue_days if latest_state else 0
             total_debt = float(
                 (latest_state.principal_debt or 0) +
@@ -1614,19 +1641,31 @@ class PreOverdueMonitorView(APIView):
                 (latest_state.penalties or 0)
             ) if latest_state else float(credit.principal_amount or 0)
 
-            # Skip credits with zero remaining debt
             if total_debt == 0 and overdue_days == 0:
                 continue
 
-            # Next planned payment date
             next_payment_date = self._next_payment_date(credit, today)
+            occ = client_credit_counts.get(credit.client_id, 1) - 1
+            features = OverduePredictionView._build_features(credit, other_credits_count=occ)
+            features['client_id'] = client.id
+            features['credit_id'] = credit.id
+            records.append(features)
+            credit_data.append((credit, latest_state, total_debt, overdue_days, next_payment_date))
 
-            # Build features & predict
-            features = OverduePredictionView._build_features(credit)
-            prediction = predict_risk(features)
+        # Batch predict — один вызов модели вместо N
+        if records:
+            predictions = predict_risk_batch(records)
+            pred_map = {(p['client_id'], p['credit_id']): p for p in predictions}
+        else:
+            pred_map = {}
 
+        rows = []
+        for credit, latest_state, total_debt, overdue_days, next_payment_date in credit_data:
+            client = credit.client
+            prediction = pred_map.get((client.id, credit.id), {})
             risk_score = prediction.get('risk_score', 0)
             if risk_score < risk_min:
+                continue
                 continue
 
             # Compliance status for phone & sms
@@ -1682,20 +1721,22 @@ class PreOverdueMonitorView(APIView):
 
     @staticmethod
     def _next_payment_date(credit, today):
-        """Определяет ближайшую плановую дату платежа."""
-        # From CreditState planned_payment_date
-        upcoming_state = credit.states.filter(
-            planned_payment_date__gte=today
-        ).order_by('planned_payment_date').values_list('planned_payment_date', flat=True).first()
-        if upcoming_state:
-            return upcoming_state
+        """Определяет ближайшую плановую дату платежа (из prefetched данных, без доп. запросов)."""
+        # From CreditState planned_payment_date (in-memory)
+        upcoming_dates = sorted(
+            (s.planned_payment_date for s in credit.states.all()
+             if s.planned_payment_date and s.planned_payment_date >= today)
+        )
+        if upcoming_dates:
+            return upcoming_dates[0]
 
-        # From Payment.planned_date
-        upcoming_pay = credit.payments.filter(
-            planned_date__gte=today
-        ).order_by('planned_date').values_list('planned_date', flat=True).first()
+        # From Payment.planned_date (in-memory)
+        upcoming_pay = sorted(
+            (p.planned_date for p in credit.payments.all()
+             if p.planned_date and p.planned_date >= today)
+        )
         if upcoming_pay:
-            return upcoming_pay
+            return upcoming_pay[0]
 
         # Estimate from open_date + monthly cycle
         if credit.open_date:

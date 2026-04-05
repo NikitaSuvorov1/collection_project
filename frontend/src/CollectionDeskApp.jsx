@@ -229,7 +229,14 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
         } catch (e) { /* ML-прогноз не критичен */ }
       }
 
-      setQueue(debtors);
+      // Сохраняем pre-overdue клиента при обновлении очереди
+      setQueue(prev => {
+        const preOverdueItem = prev.find(d => d._preOverdue);
+        if (preOverdueItem && !debtors.find(d => d.id === preOverdueItem.id)) {
+          return [preOverdueItem, ...debtors];
+        }
+        return debtors;
+      });
       if (debtors.length > 0 && !selectedId) setSelectedId(debtors[0].id);
     } catch (e) {
       console.error('Ошибка загрузки очереди:', e);

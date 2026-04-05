@@ -1,8 +1,8 @@
 # Техническая документация
 ## Система управления взысканием задолженности (Collection Management System)
 
-**Версия:** 3.1.0  
-**Дата:** Март 2026  
+**Версия:** 3.2.0  
+**Дата:** Апрель 2026  
 **Авторы:** Команда разработки
 
 ---
@@ -15,7 +15,7 @@
 4. [Структура проекта](#4-структура-проекта)
 5. [Модель данных](#5-модель-данных)
 6. [REST API](#6-rest-api)
-7. [Математическое обеспечение](#7-математическое-обеспечение)
+7. [Математическое обеспечение](#7-математическое-обеспечение) *(7.2–7.6: финансовая логика кредитов)*
 8. [ML-модели](#8-ml-модели)
 9. [Алгоритмы распределения](#9-алгоритмы-распределения-работы-по-операторам)
 10. [Дополнительные алгоритмы](#10-дополнительные-алгоритмы)
@@ -1459,7 +1459,114 @@ def calculate_monthly_payment(principal, annual_rate, term_months):
     return round(payment, 2)
 ```
 
-### 7.2 Расчёт долговой нагрузки (DTI)
+### 7.3 Начисление процентов на остаток основного долга
+
+Проценты начисляются ежемесячно на **текущий остаток основного долга** (стандартная банковская практика):
+
+$$I_t = D_t \cdot r$$
+
+Где:
+- $I_t$ — сумма начисленных процентов в месяце $t$
+- $D_t$ — остаток основного долга на начало месяца $t$
+- $r$ — месячная процентная ставка ($r = \frac{annual\_rate}{12 \cdot 100}$)
+
+**Реализация** (`fix_data_quality.py`):
+```python
+monthly_rate = rate / 100 / 12
+month_interest = principal_remaining * monthly_rate
+```
+
+**Процентные ставки по типам продуктов:**
+
+| Тип продукта | Диапазон годовой ставки |
+|-------------|------------------------|
+| Потребительский (`consumer`) | 12.9% – 24.9% |
+| Ипотека (`mortgage`) | 7.5% – 14.5% |
+| Автокредит (`car`) | 9.9% – 19.9% |
+| Кредитная карта (`credit_card`) | 22.0% – 36.0% |
+| Микрозайм (`microloan`) | 30.0% – 90.0% |
+
+### 7.4 Расчёт штрафов и пеней
+
+При просрочке платежа начисляются **пени** на сумму просроченной задолженности:
+
+$$Penalty_t = (OverduePrincipal_t + OverdueInterest_t) \cdot p \cdot 30$$
+
+Где:
+- $OverduePrincipal_t$ — просроченный основной долг
+- $OverdueInterest_t$ — просроченные проценты
+- $p$ — дневная ставка пени (0.1% = 0.001)
+- 30 — количество дней в месяце (приближённо)
+
+**Реализация** (`fix_data_quality.py`):
+```python
+daily_penalty_rate = 0.001  # 0.1% в день
+month_penalty = (overdue_principal + overdue_interest) * daily_penalty_rate * 30
+penalties += month_penalty
+```
+
+> **Примечание:** Ставка 0.1% в день соответствует типичным банковским условиям и не противоречит ст. 333 ГК РФ.
+
+### 7.5 Приоритет погашения задолженности (ст. 319 ГК РФ)
+
+При получении частичного платежа по просроченному кредиту сумма распределяется в следующем порядке:
+
+$$Payment \rightarrow \begin{cases} 1. & Penalties \text{ (штрафы и пени)} \\ 2. & OverdueInterest \text{ (просроченные проценты)} \\ 3. & OverduePrincipal \text{ (просроченный основной долг)} \end{cases}$$
+
+Алгоритм:
+1. Из суммы платежа списываются штрафы: $pay\_pen = \min(remaining, penalties)$
+2. Из остатка списываются просроченные проценты: $pay\_int = \min(remaining, overdue\_interest)$
+3. Из остатка списывается просроченный ОД: $pay\_princ = \min(remaining, overdue\_principal)$
+
+**Реализация** (`fix_data_quality.py`):
+```python
+# ст. 319 ГК РФ: Priority — penalties → overdue interest → overdue principal
+remaining_pmt = partial
+
+# 1. Penalties first
+if remaining_pmt > 0 and penalties > 0:
+    pay_pen = min(remaining_pmt, penalties)
+    penalties -= pay_pen
+    remaining_pmt -= pay_pen
+
+# 2. Overdue interest
+if remaining_pmt > 0 and overdue_interest > 0:
+    pay_int = min(remaining_pmt, overdue_interest)
+    overdue_interest -= pay_int
+    remaining_pmt -= pay_int
+
+# 3. Overdue principal
+if remaining_pmt > 0 and overdue_principal > 0:
+    pay_princ = min(remaining_pmt, overdue_principal)
+    overdue_principal -= pay_princ
+    remaining_pmt -= pay_princ
+```
+
+Для **регулярных (не просроченных)** платежей по аннуитету стандартный порядок:
+1. **Проценты** — $interest\_portion = I_t$
+2. **Основной долг** — $principal\_portion = PMT - interest\_portion$
+
+### 7.6 Определение просрочки
+
+Просрочка фиксируется при пропуске запланированного платежа:
+
+- **Дата начала просрочки** (`overdue_start_date`) — дата первого пропущенного платежа
+- **Длительность просрочки** (DPD) — $overdue\_days = (current\_date - overdue\_start\_date).days$
+- **Просроченные суммы** накапливаются при каждом пропуске:
+  - $OverduePrincipal_{t+1} = OverduePrincipal_t + (PMT - I_t)$
+  - $OverdueInterest_{t+1} = OverdueInterest_t + I_t$
+
+**Классификация просрочки (Delinquency Buckets):**
+
+| Bucket | DPD (дни) | Стадия collection |
+|--------|-----------|-------------------|
+| `current` | 0 | Без просрочки |
+| `0-30` | 1–30 | Soft Early |
+| `30-60` | 31–60 | Soft Late |
+| `60-90` | 61–90 | Hard Collection |
+| `90+` | 91+ | Legal Collection |
+
+### 7.7 Расчёт долговой нагрузки (DTI)
 
 **Debt-to-Income Ratio:**
 
@@ -1474,7 +1581,7 @@ $$DTI = \frac{Total\_Monthly\_Debt\_Payments}{Gross\_Monthly\_Income} \times 100
 | 35-50% | Приемлемая |
 | > 50% | Высокий риск |
 
-### 7.3 Расчёт эффективной процентной ставки
+### 7.8 Расчёт эффективной процентной ставки
 
 $$EIR = \left(1 + \frac{r}{n}\right)^n - 1$$
 
@@ -1483,7 +1590,7 @@ $$EIR = \left(1 + \frac{r}{n}\right)^n - 1$$
 - $r$ — номинальная годовая ставка
 - $n$ — количество периодов капитализации в году
 
-### 7.4 Расчёт NPV (Net Present Value)
+### 7.9 Расчёт NPV (Net Present Value)
 
 $$NPV = \sum_{t=1}^{n} \frac{CF_t}{(1+r)^t} - C_0$$
 
@@ -1493,7 +1600,7 @@ $$NPV = \sum_{t=1}^{n} \frac{CF_t}{(1+r)^t} - C_0$$
 - $C_0$ — начальные инвестиции
 - $n$ — количество периодов
 
-### 7.5 Метрики эффективности взыскания
+### 7.10 Метрики эффективности взыскания
 
 #### Collection Rate (CR)
 $$CR = \frac{Collected\_Amount}{Total\_Overdue\_Amount} \times 100\%$$
@@ -1507,7 +1614,7 @@ $$PTP\_Rate = \frac{Promises\_Made}{Successful\_Contacts} \times 100\%$$
 #### Kept Promise Rate
 $$Kept\_Promise\_Rate = \frac{Kept\_Promises}{Total\_Promises} \times 100\%$$
 
-### 7.6 Roll Rate Analysis
+### 7.11 Roll Rate Analysis
 
 Матрица переходов между bucket'ами:
 
@@ -3075,7 +3182,8 @@ can_contact() → violations[] → log_compliance_violation()
 | Обучение моделей | ✅ Реализовано | Страницы LoanTraining (11 шагов) и ModelTraining (10 шагов) |
 | Операторская статистика | ✅ Реализована | KPI: звонки, контакты, PTP, динамика, top promises |
 | Тесты | ✅ 37 тестов | 10 классов: модели, комплаенс, API, распределение |
-| Бизнес-логика | ⚙️ 90% | Полный цикл + ML + комплаенс |
+| Бизнес-логика | ✅ Полная | Полный цикл + ML + комплаенс + финансовая логика (ст. 319 ГК) |
+| Оптимизация БД | ✅ Реализована | prefetch_related, annotate, 9 индексов, batch predict |
 | Интеграции | ❌ Нет | SMS, CTI, БКИ — заглушки |
 | CI/CD | ❌ Нет | Требуется настройка |
 

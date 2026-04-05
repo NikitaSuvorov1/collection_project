@@ -284,6 +284,11 @@ class Credit(models.Model):
     class Meta:
         verbose_name = 'Кредит'
         verbose_name_plural = 'Кредиты'
+        indexes = [
+            models.Index(fields=['client', 'status'], name='idx_credit_client_status'),
+            models.Index(fields=['status', '-open_date'], name='idx_credit_status_open'),
+            models.Index(fields=['status', 'planned_close_date'], name='idx_credit_status_pclose'),
+        ]
 
 
 # =====================================================
@@ -862,6 +867,10 @@ class CreditState(models.Model):
     class Meta:
         verbose_name = 'Состояние кредита'
         verbose_name_plural = 'Состояния кредитов'
+        indexes = [
+            models.Index(fields=['credit', '-state_date'], name='idx_cstate_credit_date'),
+            models.Index(fields=['credit', 'planned_payment_date'], name='idx_cstate_credit_pdate'),
+        ]
 
 
 class Payment(models.Model):
@@ -889,6 +898,10 @@ class Payment(models.Model):
     class Meta:
         verbose_name = 'Платёж'
         verbose_name_plural = 'Платежи'
+        indexes = [
+            models.Index(fields=['credit', '-payment_date'], name='idx_payment_credit_date'),
+            models.Index(fields=['credit', 'planned_date'], name='idx_payment_credit_planned'),
+        ]
 
 
 class Intervention(models.Model):
@@ -938,6 +951,7 @@ class Intervention(models.Model):
             models.Index(fields=['operator', '-datetime'], name='idx_interv_op_dt'),
             models.Index(fields=['status'], name='idx_interv_status'),
             models.Index(fields=['credit'], name='idx_interv_credit'),
+            models.Index(fields=['intervention_type', 'status', '-datetime'], name='idx_interv_type_status'),
         ]
 
 
@@ -971,6 +985,7 @@ class Assignment(models.Model):
             models.Index(fields=['operator', 'assignment_date'], name='idx_assign_op_date'),
             models.Index(fields=['credit'], name='idx_assign_credit'),
             models.Index(fields=['ab_group'], name='idx_assign_ab'),
+            models.Index(fields=['operator', '-assignment_date', 'priority'], name='idx_assign_op_active'),
         ]
 
 

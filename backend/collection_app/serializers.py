@@ -40,6 +40,13 @@ class CreditSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_latest_state(self, obj):
+        # Используем prefetched states если доступны (in-memory вместо запроса)
+        if hasattr(obj, '_prefetched_objects_cache') and 'states' in obj._prefetched_objects_cache:
+            states = obj._prefetched_objects_cache['states']
+            if states:
+                state = max(states, key=lambda s: s.state_date)
+                return CreditStateSerializer(state).data
+            return None
         state = obj.states.order_by('-state_date').first()
         if state:
             return CreditStateSerializer(state).data
@@ -84,6 +91,15 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_last_promise_amount(self, obj):
+        # Используем prefetched interventions если доступны
+        if hasattr(obj, '_prefetched_objects_cache') and 'credit' in obj._prefetched_objects_cache or hasattr(obj.credit, '_prefetched_objects_cache'):
+            interventions = getattr(obj.credit, '_prefetched_objects_cache', {}).get('interventions')
+            if interventions is not None:
+                promises = [i for i in interventions if i.status == 'promise' and i.promise_amount]
+                if promises:
+                    last = max(promises, key=lambda i: i.datetime)
+                    return float(last.promise_amount)
+                return None
         from collection_app.models import Intervention
         last = Intervention.objects.filter(
             credit=obj.credit, status='promise'
@@ -93,6 +109,14 @@ class AssignmentSerializer(serializers.ModelSerializer):
         return None
     
     def get_last_promise_date(self, obj):
+        if hasattr(obj.credit, '_prefetched_objects_cache'):
+            interventions = obj.credit._prefetched_objects_cache.get('interventions')
+            if interventions is not None:
+                promises = [i for i in interventions if i.status == 'promise' and i.promise_date]
+                if promises:
+                    last = max(promises, key=lambda i: i.datetime)
+                    return str(last.promise_date)
+                return None
         from collection_app.models import Intervention
         last = Intervention.objects.filter(
             credit=obj.credit, status='promise'
@@ -102,6 +126,10 @@ class AssignmentSerializer(serializers.ModelSerializer):
         return None
     
     def get_total_attempts(self, obj):
+        if hasattr(obj.credit, '_prefetched_objects_cache'):
+            interventions = obj.credit._prefetched_objects_cache.get('interventions')
+            if interventions is not None:
+                return len(interventions)
         from collection_app.models import Intervention
         return Intervention.objects.filter(credit=obj.credit).count()
 
@@ -201,17 +229,19 @@ class Client360Serializer(serializers.ModelSerializer):
     def get_total_debt(self, obj):
         total = 0
         for credit in obj.credits.all():
-            state = credit.states.order_by('-state_date').first()
+            states = list(credit.states.all())
+            state = max(states, key=lambda s: s.state_date) if states else None
             if state:
-                total += float(state.principal_debt)
+                total += float(state.principal_debt or 0)
         return total
     
     def get_total_overdue(self, obj):
         total = 0
         for credit in obj.credits.all():
-            state = credit.states.order_by('-state_date').first()
+            states = list(credit.states.all())
+            state = max(states, key=lambda s: s.state_date) if states else None
             if state:
-                total += float(state.overdue_principal)
+                total += float(state.overdue_principal or 0)
         return total
     
     def get_nba_recommendations(self, obj):
