@@ -86,6 +86,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
   const [promiseDate, setPromiseDate] = useState("");
   const [refusalReason, setRefusalReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [complianceError, setComplianceError] = useState(null);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [sidebarTab, setSidebarTab] = useState('pending'); // 'pending' | 'worked'
   const [creditDetails, setCreditDetails] = useState([]);
@@ -391,9 +392,14 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
         body: JSON.stringify(body),
       });
       if (!resp.ok) {
-        const err = await resp.text();
-        throw new Error(err);
+        const errData = await resp.json().catch(() => null);
+        if (errData && errData.compliance_error) {
+          setComplianceError(errData);
+          return;
+        }
+        throw new Error(errData ? JSON.stringify(errData) : 'Ошибка сервера');
       }
+      setComplianceError(null);
       // Обновляем историю и очередь — помечаем клиента как отработанного сегодня
       await loadHistory(selected.clientId);
       setQueue(q => q.map(d => d.id === selected.id ? { ...d, attempts: d.attempts + 1, lastContact: new Date().toISOString(), workedToday: true, todayCount: (d.todayCount || 0) + 1 } : d));
@@ -404,7 +410,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
       setRefusalReason("");
     } catch (e) {
       console.error('Ошибка сохранения:', e);
-      alert('Ошибка сохранения взаимодействия: ' + e.message);
+      setComplianceError({ violations: ['Ошибка сохранения: ' + e.message] });
     } finally {
       setSaving(false);
     }
@@ -412,6 +418,11 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
 
   function saveResult() {
     saveInterventionToDB(0);
+  }
+
+  function selectClient(id) {
+    setSelectedId(id);
+    setComplianceError(null);
   }
 
   function goNext() {
@@ -477,7 +488,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
               <div className="muted" style={{padding:16,textAlign:'center'}}> Все клиенты отработаны!</div>
             )}
             {sidebarTab === 'pending' && pendingVisible.map(d => (
-              <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
+              <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => selectClient(d.id)}>
                 <div className="cli-left">
                   <div className="cli-name">
                     {d.mlRiskCategory !== undefined && (
@@ -500,7 +511,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
               <div className="muted" style={{padding:16,textAlign:'center'}}>Пока нет отработанных клиентов</div>
             )}
             {sidebarTab === 'worked' && workedVisible.map(d => (
-              <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(d.id)}>
+              <div key={d.id} className={`client-list-item ${d.id===selectedId ? 'selected' : ''}`} onClick={() => selectClient(d.id)}>
                 <div className="cli-left">
                   <div className="cli-name">{d.name}</div>
                   <div className="cli-phone">{d.mainPhone}</div>
@@ -570,6 +581,22 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                 <button className="btn ghost" onClick={() => setResultCode('decline')}>Отказ от оплаты</button>
                 <button className="btn ghost" onClick={() => setResultCode('no_answer')}>Не дозвон</button>
               </div>
+              {complianceError && (
+                <div style={{margin:'12px 0',padding:'12px 16px',background:'rgba(248,81,73,0.12)',border:'1px solid rgba(248,81,73,0.5)',borderRadius:8}}>
+                  <div style={{fontWeight:700,color:'#f85149',marginBottom:6,fontSize:13}}>⛔ Контакт заблокирован — 230-ФЗ</div>
+                  {complianceError.violations?.map((v, i) => (
+                    <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'2px 0'}}>• {v}</div>
+                  ))}
+                  {complianceError.counts && (
+                    <div style={{marginTop:8,fontSize:11,color:'#8b949e'}}>
+                      Контактов сегодня: {complianceError.counts.day} / {complianceError.limits?.day} &nbsp;|&nbsp;
+                      за неделю: {complianceError.counts.week} / {complianceError.limits?.week} &nbsp;|&nbsp;
+                      за месяц: {complianceError.counts.month} / {complianceError.limits?.month}
+                    </div>
+                  )}
+                  <button className="btn small ghost" style={{marginTop:8,fontSize:11}} onClick={() => setComplianceError(null)}>Закрыть</button>
+                </div>
+              )}
               <div className="history">
                 <h4>История взаимодействий</h4>
                 {selectedHistory.length === 0 && <div className="muted">Нет записей</div>}

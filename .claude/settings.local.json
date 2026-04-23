@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(ls \"C:\\\\project\\\\collection_app\" | Where-Object {$_.Name -match \"venv|\\\\.venv|env\"})"
+    ]
+  }
+}
