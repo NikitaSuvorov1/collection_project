@@ -66,23 +66,23 @@ export default function CreditsPage({ onCreditClick }) {
   const isOverdue = (status) => ['overdue', 'default'].includes(status);
 
   return (
-    <div style={{background:'#0d1117', minHeight:'100vh'}}>
+    <div style={{background:'var(--bg-body)', minHeight:'100vh'}}>
       
       {/* Header */}
-      <div style={{borderBottom:'1px solid #30363d', padding:'20px 40px'}}>
+      <div style={{borderBottom:'1px solid var(--border)', padding:'20px 40px'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <div>
-            <h1 style={{margin:0, fontSize:'1.25rem', fontWeight:600, color:'#e6edf3'}}>Реестр кредитных договоров</h1>
+            <h1 style={{margin:0, fontSize:'1.25rem', fontWeight:600, color:'var(--text-primary)'}}>Реестр кредитных договоров</h1>
           </div>
           <button 
             onClick={fetchCredits} 
             disabled={loading}
             style={{
-              background:'#161b22', 
-              border:'1px solid #30363d', 
-              padding:'8px 16px', 
+              background:'var(--bg-card)',
+              border:'1px solid var(--border)',
+              padding:'8px 16px',
               cursor:'pointer',
-              color:'#8b949e',
+              color:'var(--text-secondary)',
               fontSize:'0.875rem',
             }}
           >
@@ -92,32 +92,32 @@ export default function CreditsPage({ onCreditClick }) {
       </div>
 
       {/* Statistics */}
-      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', borderBottom:'1px solid #30363d'}}>
-        <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
-          <div style={{color:'#8b949e', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Всего договоров</div>
-          <div style={{fontSize:'1.5rem', fontWeight:600, color:'#e6edf3'}}>{stats.total}</div>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', borderBottom:'1px solid var(--border)'}}>
+        <div style={{padding:'24px 40px', borderRight:'1px solid var(--border)'}}>
+          <div style={{color:'var(--text-secondary)', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Всего договоров</div>
+          <div style={{fontSize:'1.5rem', fontWeight:600, color:'var(--text-primary)'}}>{stats.total}</div>
         </div>
-        <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
-          <div style={{color:'#8b949e', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Действующих</div>
-          <div style={{fontSize:'1.5rem', fontWeight:600, color:'#e6edf3'}}>{stats.activeCount}</div>
+        <div style={{padding:'24px 40px', borderRight:'1px solid var(--border)'}}>
+          <div style={{color:'var(--text-secondary)', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Действующих</div>
+          <div style={{fontSize:'1.5rem', fontWeight:600, color:'var(--text-primary)'}}>{stats.activeCount}</div>
         </div>
-        <div style={{padding:'24px 40px', borderRight:'1px solid #30363d'}}>
-          <div style={{color:'#8b949e', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Проблемных</div>
-          <div style={{fontSize:'1.5rem', fontWeight:600, color: stats.overdueCount > 0 ? '#f85149' : '#e6edf3'}}>{stats.overdueCount}</div>
+        <div style={{padding:'24px 40px', borderRight:'1px solid var(--border)'}}>
+          <div style={{color:'var(--text-secondary)', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Проблемных</div>
+          <div style={{fontSize:'1.5rem', fontWeight:600, color: stats.overdueCount > 0 ? 'var(--danger)' : 'var(--text-primary)'}}>{stats.overdueCount}</div>
         </div>
         <div style={{padding:'24px 40px'}}>
-          <div style={{color:'#8b949e', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Объём портфеля</div>
-          <div style={{fontSize:'1.25rem', fontWeight:600, color:'#e6edf3'}}>{formatCurrency(stats.totalAmount)}</div>
+          <div style={{color:'var(--text-secondary)', fontSize:'0.8rem', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px'}}>Объём портфеля</div>
+          <div style={{fontSize:'1.25rem', fontWeight:600, color:'var(--text-primary)'}}>{formatCurrency(stats.totalAmount)}</div>
         </div>
       </div>
 
       {/* Filter */}
-      <div style={{padding:'16px 40px', borderBottom:'1px solid #30363d', display:'flex', alignItems:'center', gap:16, background:'#1c2128'}}>
-        <label style={{color:'#8b949e', fontSize:'0.875rem'}}>Статус:</label>
+      <div style={{padding:'16px 40px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:16, background:'var(--bg-surface)'}}>
+        <label style={{color:'var(--text-secondary)', fontSize:'0.875rem'}}>Статус:</label>
         <select 
           value={filterStatus} 
           onChange={e => setFilterStatus(e.target.value)}
-          style={{padding:'6px 12px', border:'1px solid #30363d', fontSize:'0.875rem', color:'#e6edf3', background:'#0d1117'}}
+          style={{padding:'6px 12px', border:'1px solid var(--border)', fontSize:'0.875rem', color:'var(--text-primary)', background:'var(--bg-body)'}}
         >
           <option value="all">Все ({credits.length})</option>
           <option value="active">Действующие</option>
@@ -126,51 +126,51 @@ export default function CreditsPage({ onCreditClick }) {
           <option value="problem">Проблемные</option>
           <option value="closed">Закрытые</option>
         </select>
-        <span style={{marginLeft:'auto', color:'#8b949e', fontSize:'0.875rem'}}>
+        <span style={{marginLeft:'auto', color:'var(--text-secondary)', fontSize:'0.875rem'}}>
           Записей: {visible.length}
         </span>
       </div>
 
       {error && (
-        <div style={{background:'rgba(248,81,73,0.15)', color:'#f85149', padding:'12px 40px', borderBottom:'1px solid #30363d'}}>
+        <div style={{background:'rgba(248,81,73,0.15)', color:'var(--danger)', padding:'12px 40px', borderBottom:'1px solid var(--border)'}}>
           {error}
         </div>
       )}
 
       {/* Table */}
       {loading ? (
-        <div style={{textAlign:'center', padding:60, color:'#8b949e'}}>Загрузка...</div>
+        <div style={{textAlign:'center', padding:60, color:'var(--text-secondary)'}}>Загрузка...</div>
       ) : (
         <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.875rem'}}>
           <thead>
-            <tr style={{background:'#1c2128'}}>
-              <th style={{textAlign:'left', padding:'12px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>№</th>
-              <th style={{textAlign:'left', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Заёмщик</th>
-              <th style={{textAlign:'left', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Продукт</th>
-              <th style={{textAlign:'right', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Сумма</th>
-              <th style={{textAlign:'right', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Платёж</th>
-              <th style={{textAlign:'center', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Ставка</th>
-              <th style={{textAlign:'left', padding:'12px 20px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Дата выдачи</th>
-              <th style={{textAlign:'left', padding:'12px 40px', color:'#8b949e', fontWeight:500, borderBottom:'1px solid #30363d'}}>Статус</th>
+            <tr style={{background:'var(--bg-surface)'}}>
+              <th style={{textAlign:'left', padding:'12px 40px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>№</th>
+              <th style={{textAlign:'left', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Заёмщик</th>
+              <th style={{textAlign:'left', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Продукт</th>
+              <th style={{textAlign:'right', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Сумма</th>
+              <th style={{textAlign:'right', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Платёж</th>
+              <th style={{textAlign:'center', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Ставка</th>
+              <th style={{textAlign:'left', padding:'12px 20px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Дата выдачи</th>
+              <th style={{textAlign:'left', padding:'12px 40px', color:'var(--text-secondary)', fontWeight:500, borderBottom:'1px solid var(--border)'}}>Статус</th>
             </tr>
           </thead>
           <tbody>
             {visible.map(c => (
-              <tr 
-                key={c.id} 
-                style={{borderBottom:'1px solid #30363d', cursor:'pointer'}} 
+              <tr
+                key={c.id}
+                style={{borderBottom:'1px solid var(--border)', cursor:'pointer'}}
                 onClick={() => onCreditClick && onCreditClick(c.id)}
-                onMouseEnter={e => e.currentTarget.style.background = '#1c2128'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={{padding:'14px 40px', color:'#e6edf3'}}>{c.id}</td>
-                <td style={{padding:'14px 20px', color:'#e6edf3'}}>{c.client_name || `ID: ${c.client}`}</td>
-                <td style={{padding:'14px 20px', color:'#8b949e'}}>{PRODUCT_TYPES[c.product_type] || c.product_type}</td>
-                <td style={{padding:'14px 20px', textAlign:'right', color:'#e6edf3', fontWeight:500}}>{formatCurrency(c.principal_amount)}</td>
-                <td style={{padding:'14px 20px', textAlign:'right', color:'#8b949e'}}>{formatCurrency(c.monthly_payment)}</td>
-                <td style={{padding:'14px 20px', textAlign:'center', color:'#8b949e'}}>{c.interest_rate}%</td>
-                <td style={{padding:'14px 20px', color:'#8b949e'}}>{c.open_date ? new Date(c.open_date).toLocaleDateString('ru-RU') : '—'}</td>
-                <td style={{padding:'14px 40px', color: isOverdue(c.status) ? '#f85149' : '#8b949e', fontWeight: isOverdue(c.status) ? 500 : 400}}>
+                <td style={{padding:'14px 40px', color:'var(--text-primary)'}}>{c.id}</td>
+                <td style={{padding:'14px 20px', color:'var(--text-primary)'}}>{c.client_name || `ID: ${c.client}`}</td>
+                <td style={{padding:'14px 20px', color:'var(--text-secondary)'}}>{PRODUCT_TYPES[c.product_type] || c.product_type}</td>
+                <td style={{padding:'14px 20px', textAlign:'right', color:'var(--text-primary)', fontWeight:500}}>{formatCurrency(c.principal_amount)}</td>
+                <td style={{padding:'14px 20px', textAlign:'right', color:'var(--text-secondary)'}}>{formatCurrency(c.monthly_payment)}</td>
+                <td style={{padding:'14px 20px', textAlign:'center', color:'var(--text-secondary)'}}>{c.interest_rate}%</td>
+                <td style={{padding:'14px 20px', color:'var(--text-secondary)'}}>{c.open_date ? new Date(c.open_date).toLocaleDateString('ru-RU') : '—'}</td>
+                <td style={{padding:'14px 40px', color: isOverdue(c.status) ? 'var(--danger)' : 'var(--text-secondary)', fontWeight: isOverdue(c.status) ? 500 : 400}}>
                   {STATUS_LABELS[c.status] || c.status}
                 </td>
               </tr>
@@ -180,7 +180,7 @@ export default function CreditsPage({ onCreditClick }) {
       )}
       
       {!loading && visible.length === 0 && (
-        <div style={{textAlign:'center', padding:60, color:'#8b949e'}}>
+        <div style={{textAlign:'center', padding:60, color:'var(--text-secondary)'}}>
           Нет записей
         </div>
       )}

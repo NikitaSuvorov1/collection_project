@@ -265,8 +265,8 @@ function OperatorWorkspace({ operator, onLogout }) {
   };
   const statusColor = (s) => {
     if (s === 'promise' || s === 'completed') return '#16a34a';
-    if (s === 'refuse') return '#f85149';
-    if (s === 'no_answer') return '#484f58';
+    if (s === 'refuse') return 'var(--danger)';
+    if (s === 'no_answer') return 'var(--text-muted)';
     return '#d97706';
   };
 
@@ -320,8 +320,8 @@ function OperatorWorkspace({ operator, onLogout }) {
                     )}
                   </div>
                   <div className="cli-right">
-                    <div className="cli-amount" style={{ color: '#f85149' }}>{money(c.overdue_amount)}</div>
-                    <div className="cli-days" style={{ color: c.overdue_days > 30 ? '#f85149' : '#d97706' }}>{c.overdue_days} дн.</div>
+                    <div className="cli-amount" style={{ color: 'var(--danger)' }}>{money(c.overdue_amount)}</div>
+                    <div className="cli-days" style={{ color: c.overdue_days > 30 ? 'var(--danger)' : '#d97706' }}>{c.overdue_days} дн.</div>
                   </div>
                 </div>
               ))}
@@ -340,10 +340,10 @@ function OperatorWorkspace({ operator, onLogout }) {
                   <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Кредит #{selected.credit_id} • Приоритет: {selected.priority}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, color: '#8b949e' }}>Сумма просрочки</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#f85149' }}>{money(selected.overdue_amount)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Сумма просрочки</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{money(selected.overdue_amount)}</div>
                   <div className="muted" style={{ fontSize: 13 }}>
-                    Просрочка: <b style={{ color: selected.overdue_days > 30 ? '#f85149' : '#d97706' }}>{selected.overdue_days} дн.</b>
+                    Просрочка: <b style={{ color: selected.overdue_days > 30 ? 'var(--danger)' : '#d97706' }}>{selected.overdue_days} дн.</b>
                   </div>
                 </div>
               </div>
@@ -355,8 +355,8 @@ function OperatorWorkspace({ operator, onLogout }) {
                   padding: '10px 14px', marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
                 }>
                   <div>
-                    <div style={{ fontSize: 13, color: '#3fb950', fontWeight: 600 }}> Последнее обещание оплаты</div>
-                    <div style={{ fontSize: 12, color: '#3fb950', marginTop: 2 }}>
+                    <div style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}> Последнее обещание оплаты</div>
+                    <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 2 }}>
                       {selected.last_promise_date ? `Срок: до ${selected.last_promise_date}` : ''}
                     </div>
                   </div>
@@ -393,7 +393,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                           </div>
                         )}
                         {h.refusal_reason && (
-                          <div style={{ fontSize: 13, color: '#f85149', marginTop: 4 }}>
+                          <div style={{ fontSize: 13, color: 'var(--danger)', marginTop: 4 }}>
                             Причина отказа: {h.refusal_reason}
                           </div>
                         )}
@@ -441,7 +441,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                   <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{selected?.client_name}</div>
                   <div className="muted" style={{ fontSize: 13 }}>{selected?.phone}</div>
                 </div>
-                <button className="btn large" style={{ width: '100%', background: '#f85149' }} onClick={handleEndCall}>
+                <button className="btn large" style={{ width: '100%', background: 'var(--danger)' }} onClick={handleEndCall}>
                   Завершить звонок
                 </button>
                 <button className="btn ghost" style={{ width: '100%', marginTop: 8 }} onClick={handleCancel}>
@@ -465,14 +465,14 @@ function OperatorWorkspace({ operator, onLogout }) {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
-                          border: callResult === opt.value ? '2px solid #388bfd' : '1px solid #30363d',
-                          background: callResult === opt.value ? 'rgba(56,139,253,0.15)' : '#161b22',
+                          border: callResult === opt.value ? '2px solid var(--accent)' : '1px solid var(--border)',
+                          background: callResult === opt.value ? 'rgba(56,139,253,0.15)' : 'var(--bg-card)',
                         }}
                       >
                         <input type="radio" name="result" value={opt.value}
                           checked={callResult === opt.value}
                           onChange={() => handleSelectResult(opt.value)}
-                          style={{ accentColor: '#388bfd' }}
+                          style={{ accentColor: 'var(--accent)' }}
                         />
                         <span>{opt.icon} {opt.label}</span>
                       </label>
@@ -521,7 +521,7 @@ function OperatorWorkspace({ operator, onLogout }) {
                 </div>
 
                 {validationError && (
-                  <div style={{ color: '#f85149', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>
+                  <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8, fontWeight: 500 }}>
                      {validationError}
                   </div>
                 )}

@@ -44,9 +44,9 @@ function ActionPanel({ row, onAction }) {
 
   return (
     <div style={{
-      background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16,
+      background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16,
     }}>
-      <h3 style={{ margin: '0 0 12px', fontSize: 15, borderBottom: '1px solid #30363d', paddingBottom: 8 }}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
         {'\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044f (230-\u0424\u0417)'}
       </h3>
 
@@ -107,8 +107,8 @@ function ActionPanel({ row, onAction }) {
       </div>
 
       {/* 230-FZ checks summary */}
-      <div style={{ marginTop: 14, borderTop: '1px solid #30363d', paddingTop: 10 }}>
-        <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 6 }}>{'\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 230-\u0424\u0417'}</div>
+      <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>{'\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 230-\u0424\u0417'}</div>
         {row.phone?.checks && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, fontSize: 11 }}>
             {[
@@ -219,14 +219,14 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '16px 20px' }}>
       <h1 style={{ fontSize: 22, margin: '0 0 4px' }}>{'\u041f\u0440\u0435\u0434\u0438\u043a\u0442\u0438\u0432\u043d\u044b\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u043f\u0440\u043e\u0441\u0440\u043e\u0447\u043a\u0438'}</h1>
-      <p style={{ color: '#8b949e', fontSize: 13, margin: '0 0 16px' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '0 0 16px' }}>
         {'\u041f\u0440\u043e\u0433\u043d\u043e\u0437 \u0432\u044b\u0445\u043e\u0434\u0430 \u043d\u0430 \u043f\u0440\u043e\u0441\u0440\u043e\u0447\u043a\u0443 \u0441 \u043a\u043e\u043d\u0442\u0440\u043e\u043b\u0435\u043c 230-\u0424\u0417'}
       </p>
 
       {/* Summary cards */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         {[
-          { label: '\u0412\u0441\u0435\u0433\u043e \u043a\u0440\u0435\u0434\u0438\u0442\u043e\u0432', value: stats.total, color: '#e6edf3' },
+          { label: '\u0412\u0441\u0435\u0433\u043e \u043a\u0440\u0435\u0434\u0438\u0442\u043e\u0432', value: stats.total, color: 'var(--text-primary)' },
           { label: '\u0412\u044b\u0441\u043e\u043a\u0438\u0439 \u0440\u0438\u0441\u043a', value: stats.high, color: '#ef4444' },
           { label: '\u0421\u0440\u0435\u0434\u043d\u0438\u0439 \u0440\u0438\u0441\u043a', value: stats.medium, color: '#eab308' },
           { label: '\u041d\u0438\u0437\u043a\u0438\u0439 \u0440\u0438\u0441\u043a', value: stats.low, color: '#22c55e' },
@@ -234,10 +234,10 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
           { label: '\u0417\u0432\u043e\u043d\u043e\u043a \u0437\u0430\u043f\u0440\u0435\u0449\u0451\u043d', value: stats.phoneBlocked, color: '#f97316' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{
-            background: '#161b22', border: '1px solid #30363d', borderRadius: 8,
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
             padding: '10px 16px', flex: '1 1 140px', minWidth: 130,
           }}>
-            <div style={{ fontSize: 11, color: '#8b949e' }}>{label}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</div>
             <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
           </div>
         ))}
@@ -245,12 +245,12 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
 
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 13, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {'\u0413\u043e\u0440\u0438\u0437\u043e\u043d\u0442 (\u0434\u043d\u0435\u0439)'}:
           <select
             value={daysAhead}
             onChange={e => setDaysAhead(Number(e.target.value))}
-            style={{ padding: '4px 8px', background: '#161b22', border: '1px solid #30363d', borderRadius: 6, color: '#e6edf3' }}
+            style={{ padding: '4px 8px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
           >
             <option value={7}>7</option>
             <option value={14}>14</option>
@@ -299,19 +299,19 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
       {/* Main: table + detail */}
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 16, alignItems: 'start' }}>
         {/* Table */}
-        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#0d1117' }}>
+                <tr style={{ background: 'var(--bg-body)' }}>
                   {['#', '\u041a\u043b\u0438\u0435\u043d\u0442', '\u041f\u0440\u043e\u0434\u0443\u043a\u0442', '\u041f\u043b\u0430\u0442\u0451\u0436', '\u0414\u0430\u0442\u0430 \u043f\u043b\u0430\u0442\u0435\u0436\u0430', '\u041e\u0441\u0442\u0430\u043b\u043e\u0441\u044c \u0434\u043d.', '\u0414\u043e\u043b\u0433', 'DPD', '\u0420\u0438\u0441\u043a', '\u041a\u043e\u043d\u0442\u0430\u043a\u0442'].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#8b949e', fontWeight: 600, borderBottom: '2px solid #30363d', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, borderBottom: '2px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: '#8b949e' }}>{'\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0434\u0430\u043d\u043d\u044b\u0445...'}</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)' }}>{'\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0434\u0430\u043d\u043d\u044b\u0445...'}</td></tr>
                 )}
                 {!loading && filtered.length === 0 && (
                   <tr><td colSpan={10} style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>{'\u041d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445'}</td></tr>
@@ -326,17 +326,17 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
                       style={{
                         cursor: 'pointer',
                         background: isSelected ? '#1c2541' : 'transparent',
-                        borderBottom: '1px solid #21262d',
+                        borderBottom: '1px solid var(--bg-elevated)',
                       }}
                     >
                       <td style={tdS}>{i + 1}</td>
                       <td style={tdS}>
                         <div style={{ fontWeight: 500 }}>{r.client_name}</div>
-                        <div style={{ fontSize: 11, color: '#58a6ff', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onCreditClick && onCreditClick(r.credit_id); }} title="\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u0443 \u043a\u0440\u0435\u0434\u0438\u0442\u0430">#{r.credit_id}</div>
+                        <div style={{ fontSize: 11, color: 'var(--accent-hover)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onCreditClick && onCreditClick(r.credit_id); }} title="\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u0443 \u043a\u0440\u0435\u0434\u0438\u0442\u0430">#{r.credit_id}</div>
                       </td>
                       <td style={tdS}>{r.product_type}</td>
                       <td style={tdS}>{fmt(r.monthly_payment)}</td>
-                      <td style={{ ...tdS, color: paymentSoon ? '#f97316' : '#e6edf3', fontWeight: paymentSoon ? 700 : 400 }}>
+                      <td style={{ ...tdS, color: paymentSoon ? '#f97316' : 'var(--text-primary)', fontWeight: paymentSoon ? 700 : 400 }}>
                         {fmtDate(r.next_payment_date)}
                       </td>
                       <td style={tdS}>
@@ -360,7 +360,7 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
                       </td>
                       <td style={tdS}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ width: 50, height: 6, background: '#30363d', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: 50, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
                             <div style={{ width: `${r.risk_score * 100}%`, height: '100%', background: getRiskColor(r.risk_category), borderRadius: 3 }} />
                           </div>
                           <span style={{
@@ -401,8 +401,8 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
                 {Object.entries(selected.probabilities || {}).map(([k, v]) => (
-                  <div key={k} style={{ background: '#0d1117', borderRadius: 6, padding: '6px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#8b949e' }}>{k}</div>
+                  <div key={k} style={{ background: 'var(--bg-body)', borderRadius: 6, padding: '6px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{k}</div>
                     <div style={{ fontWeight: 700, color: k === '\u0412\u044b\u0441\u043e\u043a\u0438\u0439' ? '#ef4444' : k === '\u0421\u0440\u0435\u0434\u043d\u0438\u0439' ? '#eab308' : '#22c55e' }}>
                       {(v * 100).toFixed(1)}%
                     </div>
@@ -412,31 +412,31 @@ export default function OverduePredictionPage({ onStartCall, onCreditClick }) {
             </div>
 
             {/* Payment info */}
-            <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #30363d', paddingBottom: 8, marginBottom: 10 }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 8, marginBottom: 10 }}>
                 <h3 style={{ margin: 0, fontSize: 15 }}>{'\u0418\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f \u043e \u043a\u0440\u0435\u0434\u0438\u0442\u0435'}</h3>
                 <button className="btn small ghost" style={{ fontSize: 12 }} onClick={() => onCreditClick && onCreditClick(selected.credit_id)}>{'\u041a\u0430\u0440\u0442\u0430 \u043a\u0440\u0435\u0434\u0438\u0442\u0430 \u2192'}</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                <div><span style={{ color: '#8b949e' }}>{'\u041f\u0440\u043e\u0434\u0443\u043a\u0442'}:</span> {selected.product_type}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u0421\u0442\u0430\u0442\u0443\u0441'}:</span> {selected.credit_status}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u0421\u0443\u043c\u043c\u0430'}:</span> {fmt(selected.principal_amount)}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u041f\u043b\u0430\u0442\u0451\u0436'}:</span> {fmt(selected.monthly_payment)}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u041e\u0431\u0449\u0438\u0439 \u0434\u043e\u043b\u0433'}:</span> {fmt(selected.total_debt)}</div>
-                <div><span style={{ color: '#8b949e' }}>DPD:</span> {selected.overdue_days} {'\u0434\u043d.'}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u043a\u0430'}:</span> {selected.delinquency_bucket}</div>
-                <div><span style={{ color: '#8b949e' }}>{'\u0422\u0435\u043b\u0435\u0444\u043e\u043d'}:</span> {selected.client_phone || '\u2014'}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u041f\u0440\u043e\u0434\u0443\u043a\u0442'}:</span> {selected.product_type}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u0421\u0442\u0430\u0442\u0443\u0441'}:</span> {selected.credit_status}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u0421\u0443\u043c\u043c\u0430'}:</span> {fmt(selected.principal_amount)}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u041f\u043b\u0430\u0442\u0451\u0436'}:</span> {fmt(selected.monthly_payment)}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u041e\u0431\u0449\u0438\u0439 \u0434\u043e\u043b\u0433'}:</span> {fmt(selected.total_debt)}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>DPD:</span> {selected.overdue_days} {'\u0434\u043d.'}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u043a\u0430'}:</span> {selected.delinquency_bucket}</div>
+                <div><span style={{ color: 'var(--text-secondary)' }}>{'\u0422\u0435\u043b\u0435\u0444\u043e\u043d'}:</span> {selected.client_phone || '\u2014'}</div>
               </div>
               <div style={{
                 marginTop: 10, padding: '8px 12px', borderRadius: 6,
-                background: selected.days_to_payment !== null && selected.days_to_payment <= 3 ? '#7f1d1d' : '#0d1117',
-                border: '1px solid #30363d',
+                background: selected.days_to_payment !== null && selected.days_to_payment <= 3 ? '#7f1d1d' : 'var(--bg-body)',
+                border: '1px solid var(--border)',
               }}>
-                <div style={{ fontSize: 12, color: '#8b949e' }}>{'\u0414\u0430\u0442\u0430 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u043f\u043b\u0430\u0442\u0435\u0436\u0430'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{'\u0414\u0430\u0442\u0430 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u043f\u043b\u0430\u0442\u0435\u0436\u0430'}</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: selected.days_to_payment !== null && selected.days_to_payment <= 3 ? '#fca5a5' : '#3b82f6' }}>
                   {fmtDate(selected.next_payment_date)}
                   {selected.days_to_payment !== null && (
-                    <span style={{ fontSize: 13, fontWeight: 400, marginLeft: 8, color: '#8b949e' }}>
+                    <span style={{ fontSize: 13, fontWeight: 400, marginLeft: 8, color: 'var(--text-secondary)' }}>
                       ({'\u0447\u0435\u0440\u0435\u0437'} {selected.days_to_payment} {'\u0434\u043d.'})
                     </span>
                   )}

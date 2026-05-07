@@ -12,11 +12,27 @@ import ModelTrainingPage from './ModelTrainingPage'
 import LoanTrainingPage from './LoanTrainingPage'
 import DatabaseViewPage from './DatabaseViewPage'
 import OperatorStatsPage from './OperatorStatsPage'
+import AdminCollectionPlanPage from './AdminCollectionPlanPage'
 import './styles.css'
 
 const SESSION_KEY = 'collection_user';
 const NAV_STATE_KEY = 'collection_nav';
 const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes in ms
+const APP_NAME = 'ИС "Система ДРПЗ"';
+
+function BrandPlaque() {
+  return (
+    <header className="app-brand-plaque">
+      <div className="app-brand-plaque-inner">
+        <div className="app-brand-main">
+          <div className="app-brand-mark">ИС</div>
+          <div className="app-brand-title">{APP_NAME}</div>
+        </div>
+        <div className="app-brand-code">ДРПЗ</div>
+      </div>
+    </header>
+  );
+}
 
 function Root() {
   const [user, setUser] = useState(() => {
@@ -162,14 +178,22 @@ function Root() {
   };
 
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    return (
+      <div className="app-shell">
+        <BrandPlaque />
+        <LoginPage onLogin={handleLogin} />
+      </div>
+    );
   }
 
-  const isManager = user.role === 'manager';
+  const isAdmin = user.role === 'admin';
+  const isManager = user.role === 'manager' || isAdmin;
+  const roleLabel = isAdmin ? 'Администратор' : user.role === 'manager' ? 'Руководитель' : 'Оператор';
 
   return (
-    <div>
-      <nav style={{maxWidth:1400,margin:'0 auto',display:'flex',gap:8,alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #30363d',background:'#161b22'}}>
+    <div className="app-shell">
+      <BrandPlaque />
+      <nav className="app-nav">
         <button className={`btn ${page === 'desk' ? '' : 'ghost'}`} onClick={() => setPage('desk')}> Рабочий стол</button>
         <button className={`btn ${page === 'credits' ? '' : 'ghost'}`} onClick={() => setPage('credits')}> Кредиты</button>
         <button className={`btn ${page === 'client360' ? '' : 'ghost'}`} onClick={() => setPage('client360')}> 360° Клиент</button>
@@ -180,10 +204,12 @@ function Root() {
         <button className={`btn ${page === 'database' ? '' : 'ghost'}`} onClick={() => setPage('database')}> База данных</button>
         <button className={`btn ${page === 'mystats' ? '' : 'ghost'}`} onClick={() => setPage('mystats')}> Моя статистика</button>
         {isManager && <button className={`btn ${page === 'dashboard' ? '' : 'ghost'}`} onClick={() => setPage('dashboard')}> Дашборд</button>}
+        {isAdmin && <button className={`btn ${page === 'adminPlan' ? '' : 'ghost'}`} onClick={() => setPage('adminPlan')}> План взыскания</button>}
         <div style={{flex:1}} />
-        <span style={{fontSize:13,color:'#8b949e'}}>{user.name} ({user.role === 'manager' ? 'Руководитель' : 'Оператор'})</span>
+        <span className="app-nav-user">{user.name} ({roleLabel})</span>
         <button className="btn small ghost" onClick={handleLogout}>Выход</button>
       </nav>
+      <main className="page-content">
       {page === 'desk' && <Desk user={user} onClient360={handleClient360} onCreditClick={(id) => handleCreditClick(id, 'desk')} preOverdueContext={preOverdueContext} onClearPreOverdue={() => setPreOverdueContext(null)} />}
       {page === 'credits' && <CreditsPage onCreditClick={handleCreditClick} />}
       {page === 'creditDetail' && creditId && <CreditDetailPage creditId={creditId} onBack={handleBackToCredits} onClient360={handleClient360} />}
@@ -199,6 +225,8 @@ function Root() {
       {page === 'loanTraining' && <LoanTrainingPage />}
       {page === 'database' && <DatabaseViewPage />}
       {page === 'mystats' && <OperatorStatsPage user={user} onBack={() => setPage('desk')} />}
+      {page === 'adminPlan' && <AdminCollectionPlanPage user={user} />}
+      </main>
     </div>
   )
 }

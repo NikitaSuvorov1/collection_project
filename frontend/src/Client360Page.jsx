@@ -243,16 +243,16 @@ function getPsychotypeLabel(psychotype) {
 
 function getResultBadge(result) {
   const badges = {
-    promise_to_pay: { label: 'Обещание', color: '#3fb950', bg: 'rgba(63,185,80,0.2)' },
-    no_answer: { label: 'Не дозвон', color: '#8b949e', bg: '#21262d' },
-    callback: { label: 'Перезвонить', color: '#d29922', bg: 'rgba(210,153,34,0.2)' },
-    refuse: { label: 'Отказ', color: '#f85149', bg: 'rgba(248,81,73,0.2)' },
-    promise: { label: 'Обещание', color: '#3fb950', bg: 'rgba(63,185,80,0.2)' },
-    completed: { label: 'Завершено', color: '#3fb950', bg: 'rgba(63,185,80,0.2)' },
-    partial_payment: { label: 'Частичная оплата', color: '#388bfd', bg: 'rgba(56,139,253,0.2)' },
-    full_payment: { label: 'Полная оплата', color: '#3fb950', bg: 'rgba(63,185,80,0.2)' },
+    promise_to_pay: { label: 'Обещание', color: 'var(--success)', bg: 'rgba(63,185,80,0.2)' },
+    no_answer: { label: 'Не дозвон', color: 'var(--text-secondary)', bg: 'var(--bg-elevated)' },
+    callback: { label: 'Перезвонить', color: 'var(--warning)', bg: 'rgba(210,153,34,0.2)' },
+    refuse: { label: 'Отказ', color: 'var(--danger)', bg: 'rgba(248,81,73,0.2)' },
+    promise: { label: 'Обещание', color: 'var(--success)', bg: 'rgba(63,185,80,0.2)' },
+    completed: { label: 'Завершено', color: 'var(--success)', bg: 'rgba(63,185,80,0.2)' },
+    partial_payment: { label: 'Частичная оплата', color: 'var(--accent)', bg: 'rgba(56,139,253,0.2)' },
+    full_payment: { label: 'Полная оплата', color: 'var(--success)', bg: 'rgba(63,185,80,0.2)' },
   };
-  return badges[result] || { label: result || '—', color: '#8b949e', bg: '#21262d' };
+  return badges[result] || { label: result || '—', color: 'var(--text-secondary)', bg: 'var(--bg-elevated)' };
 }
 
 function getChannelIcon(channel) {
@@ -314,12 +314,12 @@ function getDayLabel(day) {
 function RiskTriggerBadge({ type, active }) {
   if (!active) return null;
   const triggers = {
-    income_dropped: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '', label: 'Падение дохода' },
-    job_changed_recently: { bg: 'rgba(248,81,73,0.2)', color: '#f85149', icon: '', label: 'Смена работы' },
-    multiple_credits: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '', label: 'Много кредитов' },
-    activity_dropped: { bg: 'rgba(210,153,34,0.2)', color: '#d29922', icon: '', label: 'Падение активности' },
+    income_dropped: { bg: 'rgba(248,81,73,0.2)', color: 'var(--danger)', icon: '', label: 'Падение дохода' },
+    job_changed_recently: { bg: 'rgba(248,81,73,0.2)', color: 'var(--danger)', icon: '', label: 'Смена работы' },
+    multiple_credits: { bg: 'rgba(210,153,34,0.2)', color: 'var(--warning)', icon: '', label: 'Много кредитов' },
+    activity_dropped: { bg: 'rgba(210,153,34,0.2)', color: 'var(--warning)', icon: '', label: 'Падение активности' },
   };
-  const style = triggers[type] || { bg: '#21262d', color: '#8b949e', icon: '', label: type };
+  const style = triggers[type] || { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)', icon: '', label: type };
   
   return (
     <div className="risk-trigger" style={{ background: style.bg, color: style.color }}>
@@ -988,9 +988,9 @@ export default function Client360Page({ clientId, onBack }) {
 
                     {/* Key risk features from highest-risk credit */}
                     {maxRisk.features && (
-                      <div style={{ marginTop: 10, padding: '8px 10px', background: '#1c2128', borderRadius: 6, fontSize: 12 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 4, color: '#8b949e' }}>Ключевые факторы (макс. риск):</div>
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 12px', color:'#8b949e' }}>
+                      <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--bg-surface)', borderRadius: 6, fontSize: 12 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Ключевые факторы (макс. риск):</div>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 12px', color:'var(--text-secondary)' }}>
                           {maxRisk.features.overdue_days != null && <div>Дней просрочки: <b>{maxRisk.features.overdue_days}</b></div>}
                           {maxRisk.features.debt_to_income != null && <div>Долг/доход: <b>{(maxRisk.features.debt_to_income * 100).toFixed(0)}%</b></div>}
                           {maxRisk.features.payment_ratio != null && <div>Доля платежа: <b>{(maxRisk.features.payment_ratio * 100).toFixed(0)}%</b></div>}
@@ -1001,7 +1001,7 @@ export default function Client360Page({ clientId, onBack }) {
 
                     {/* Recommendation */}
                     {maxRisk.recommendation && (
-                      <div style={{ marginTop: 8, padding: '6px 10px', background: `${overallColor}10`, borderRadius: 6, fontSize: 12, color: '#8b949e' }}>
+                      <div style={{ marginTop: 8, padding: '6px 10px', background: `${overallColor}10`, borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
                          {maxRisk.recommendation}
                       </div>
                     )}

@@ -145,53 +145,53 @@ const HYPERPARAMS = [
 ];
 
 const HARD_REJECT_RULES = [
-  { rule: 'Расходы ≥ дохода', condition: 'total_expenses ≥ total_income', color: '#f85149' },
-  { rule: 'Критический DTI > 100%', condition: 'dti_ratio > 1.0', color: '#f85149' },
-  { rule: 'DTI > 80% (порог ЦБ РФ)', condition: 'dti_ratio > 0.8', color: '#f85149' },
-  { rule: 'Нулевой доход', condition: 'total_income ≤ 0', color: '#f85149' },
-  { rule: 'Платёж > 50% дохода', condition: 'monthly_payment_est > total_income × 0.5', color: '#d29922' },
-  { rule: 'Доход на чл. семьи < прожит. минимума', condition: '(income − expenses − payment) / family_size < 17 000 ₽', color: '#d29922' },
-  { rule: '≥5 иждивенцев при доходе < 200 000', condition: 'dependents ≥ 5 AND income < 200 000', color: '#d29922' },
+  { rule: 'Расходы ≥ дохода', condition: 'total_expenses ≥ total_income', color: 'var(--danger)' },
+  { rule: 'Критический DTI > 100%', condition: 'dti_ratio > 1.0', color: 'var(--danger)' },
+  { rule: 'DTI > 80% (порог ЦБ РФ)', condition: 'dti_ratio > 0.8', color: 'var(--danger)' },
+  { rule: 'Нулевой доход', condition: 'total_income ≤ 0', color: 'var(--danger)' },
+  { rule: 'Платёж > 50% дохода', condition: 'monthly_payment_est > total_income × 0.5', color: 'var(--warning)' },
+  { rule: 'Доход на чл. семьи < прожит. минимума', condition: '(income − expenses − payment) / family_size < 17 000 ₽', color: 'var(--warning)' },
+  { rule: '≥5 иждивенцев при доходе < 200 000', condition: 'dependents ≥ 5 AND income < 200 000', color: 'var(--warning)' },
 ];
 
 const s = {
   page: { maxWidth: 1200, margin: '0 auto', padding: '24px 16px' },
-  h1: { fontSize: 24, fontWeight: 700, color: '#e6edf3', margin: '0 0 4px' },
-  subtitle: { fontSize: 14, color: '#8b949e', marginBottom: 24 },
-  section: { background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 20, marginBottom: 20 },
-  sectionTitle: { fontSize: 17, fontWeight: 700, color: '#e6edf3', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 },
+  h1: { fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' },
+  subtitle: { fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 },
+  section: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 },
   tabs: { display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' },
   tab: (active) => ({
-    padding: '8px 16px', borderRadius: 6, border: '1px solid #30363d', cursor: 'pointer',
+    padding: '8px 16px', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer',
     fontSize: 13, fontWeight: 500, transition: 'all .15s',
-    background: active ? 'rgba(56,139,253,0.15)' : '#0d1117',
-    color: active ? '#388bfd' : '#8b949e',
-    borderColor: active ? '#388bfd' : '#30363d',
+    background: active ? 'rgba(56,139,253,0.15)' : 'var(--bg-body)',
+    color: active ? 'var(--accent)' : 'var(--text-secondary)',
+    borderColor: active ? 'var(--accent)' : 'var(--border)',
   }),
-  th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #30363d', color: '#8b949e', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' },
-  td: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#e6edf3', verticalAlign: 'top' },
-  mono: { fontFamily: 'monospace', fontSize: 12, color: '#8b949e', background: '#0d1117', padding: '2px 6px', borderRadius: 4 },
+  th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '10px 12px', borderBottom: '1px solid var(--bg-elevated)', color: 'var(--text-primary)', verticalAlign: 'top' },
+  mono: { fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-body)', padding: '2px 6px', borderRadius: 4 },
   badge: (color, bg) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color, background: bg }),
   stepCard: (active) => ({
-    background: active ? '#1c2128' : '#161b22', border: `1px solid ${active ? '#388bfd' : '#30363d'}`, borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all .15s',
+    background: active ? 'var(--bg-surface)' : 'var(--bg-card)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all .15s',
   }),
-  stepN: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: '#21262d', color: '#e6edf3', fontSize: 13, fontWeight: 700, marginRight: 10 },
-  arrow: { textAlign: 'center', color: '#484f58', fontSize: 20, padding: '4px 0' },
-  code: { fontFamily: 'monospace', fontSize: 13, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, padding: '10px 14px', color: '#e6edf3', display: 'block', marginTop: 10, wordBreak: 'break-all' },
-  metricBox: { background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, padding: '12px 16px', textAlign: 'center' },
-  metricValue: { fontSize: 28, fontWeight: 700, color: '#e6edf3', lineHeight: 1.1 },
-  metricLabel: { fontSize: 12, color: '#8b949e', marginTop: 4 },
-  groupHeader: { fontSize: 15, fontWeight: 600, color: '#e6edf3', padding: '12px 0 8px', borderBottom: '1px solid #30363d', marginBottom: 12 },
-  featureRow: { display: 'grid', gridTemplateColumns: '180px 1fr 1fr 90px', gap: 8, padding: '8px 0', borderBottom: '1px solid #21262d', fontSize: 13, alignItems: 'start' },
-  muted: { color: '#8b949e' },
-  param: { fontFamily: 'monospace', fontSize: 13, color: '#388bfd' },
+  stepN: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, marginRight: 10 },
+  arrow: { textAlign: 'center', color: 'var(--text-muted)', fontSize: 20, padding: '4px 0' },
+  code: { fontFamily: 'monospace', fontSize: 13, background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px', color: 'var(--text-primary)', display: 'block', marginTop: 10, wordBreak: 'break-all' },
+  metricBox: { background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', textAlign: 'center' },
+  metricValue: { fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 },
+  metricLabel: { fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 },
+  groupHeader: { fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', padding: '12px 0 8px', borderBottom: '1px solid var(--border)', marginBottom: 12 },
+  featureRow: { display: 'grid', gridTemplateColumns: '180px 1fr 1fr 90px', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--bg-elevated)', fontSize: 13, alignItems: 'start' },
+  muted: { color: 'var(--text-secondary)' },
+  param: { fontFamily: 'monospace', fontSize: 13, color: 'var(--accent)' },
   logBox: {
-    fontFamily: 'monospace', fontSize: 12, background: '#0d1117', border: '1px solid #30363d',
-    borderRadius: 8, padding: 14, color: '#8b949e', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.6,
+    fontFamily: 'monospace', fontSize: 12, background: 'var(--bg-body)', border: '1px solid var(--border)',
+    borderRadius: 8, padding: 14, color: 'var(--text-secondary)', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.6,
   },
   trainBtn: {
     padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-    fontSize: 14, fontWeight: 600, background: '#388bfd', color: '#fff', transition: 'opacity .15s',
+    fontSize: 14, fontWeight: 600, background: 'var(--accent)', color: '#fff', transition: 'opacity .15s',
   },
   trainBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
 };
@@ -271,12 +271,12 @@ export default function LoanTrainingPage() {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <span style={s.stepN}>{step.step}</span>
                     <span style={{ fontSize: 18, marginRight: 8 }}>{step.icon}</span>
-                    <strong style={{ color: '#e6edf3', fontSize: 14 }}>{step.title}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>{step.title}</strong>
                   </div>
-                  <div style={{ color: '#8b949e', fontSize: 13, marginTop: 8, marginLeft: 38 }}>{step.desc}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 8, marginLeft: 38 }}>{step.desc}</div>
                   {activeStep === i && (
                     <div style={{ marginTop: 12, marginLeft: 38 }}>
-                      <div style={{ color: '#e6edf3', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{step.detail}</div>
+                      <div style={{ color: 'var(--text-primary)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{step.detail}</div>
                       {step.command && <code style={s.code}>$ {step.command}</code>}
                     </div>
                   )}
@@ -292,11 +292,11 @@ export default function LoanTrainingPage() {
       {activeTab === 'features' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> Вектор признаков — {TOTAL_FEATURES} features</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Каждая кредитная заявка преобразуется в числовой вектор из {TOTAL_FEATURES} признаков. Категориальные переменные кодируются через One-Hot (семейное положение, тип занятости) и Ordinal encoding (образование, подтверждение дохода, жилищные условия).
           </div>
 
-          <div style={{ ...s.featureRow, fontWeight: 700, color: '#8b949e', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #30363d' }}>
+          <div style={{ ...s.featureRow, fontWeight: 700, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>
             <div>Признак</div>
             <div>Источник</div>
             <div>Трансформация</div>
@@ -309,8 +309,8 @@ export default function LoanTrainingPage() {
               {group.features.map(f => (
                 <div key={f.name} style={s.featureRow}>
                   <div>
-                    <span style={{ color: '#e6edf3', fontWeight: 500 }}>{f.label}</span>
-                    <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#484f58', marginTop: 2 }}>{f.name}</div>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{f.label}</span>
+                    <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{f.name}</div>
                   </div>
                   <div style={s.muted}>{f.source}</div>
                   <div><span style={s.mono}>{f.transform}</span></div>
@@ -320,8 +320,8 @@ export default function LoanTrainingPage() {
             </div>
           ))}
 
-          <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-             Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1). Опорные уровни (base): <span style={s.mono}>single</span> для family, <span style={s.mono}>employed</span> для employment — не кодируются (предотвращение мультиколлинеарности).
+          <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+             Все признаки нормализуются через <strong style={{ color: 'var(--text-primary)' }}>StandardScaler</strong> (μ=0, σ=1). Опорные уровни (base): <span style={s.mono}>single</span> для family, <span style={s.mono}>employed</span> для employment — не кодируются (предотвращение мультиколлинеарности).
           </div>
         </div>
       )}
@@ -330,19 +330,19 @@ export default function LoanTrainingPage() {
       {activeTab === 'target' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> Целевая переменная — decision</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Бинарная классификация: одобрение или отказ в выдаче кредита.
           </div>
 
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             {[
-              { cls: 1, label: 'Одобрено (approved)', color: '#3fb950', bg: 'rgba(63,185,80,0.15)', icon: '' },
-              { cls: 0, label: 'Отказано (rejected)', color: '#f85149', bg: 'rgba(248,81,73,0.15)', icon: '' },
+              { cls: 1, label: 'Одобрено (approved)', color: 'var(--success)', bg: 'rgba(63,185,80,0.15)', icon: '' },
+              { cls: 0, label: 'Отказано (rejected)', color: 'var(--danger)', bg: 'rgba(248,81,73,0.15)', icon: '' },
             ].map(r => (
               <div key={r.cls} style={{ flex: 1, background: r.bg, border: `1px solid ${r.color}40`, borderRadius: 10, padding: 20, textAlign: 'center' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{r.icon}</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: r.color }}>{r.label}</div>
-                <div style={{ fontFamily: 'monospace', fontSize: 14, color: '#8b949e', marginTop: 6 }}>y = {r.cls}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text-secondary)', marginTop: 6 }}>y = {r.cls}</div>
               </div>
             ))}
           </div>
@@ -391,7 +391,7 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
       {activeTab === 'model' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> GradientBoostingClassifier — гиперпараметры</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Ансамблевый метод: последовательное построение деревьев решений, каждое дерево корректирует ошибки предыдущих (градиентный бустинг).
           </div>
 
@@ -407,7 +407,7 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
               {HYPERPARAMS.map(h => (
                 <tr key={h.param}>
                   <td style={s.td}><span style={s.param}>{h.param}</span></td>
-                  <td style={s.td}><strong style={{ color: '#e6edf3' }}>{h.value}</strong></td>
+                  <td style={s.td}><strong style={{ color: 'var(--text-primary)' }}>{h.value}</strong></td>
                   <td style={s.td}><span style={s.muted}>{h.desc}</span></td>
                 </tr>
               ))}
@@ -424,19 +424,19 @@ y = 1 (одобрено) если approval_score > 0.5, иначе 0`}</div>
               ].map(a => (
                 <div key={a.file} style={{ ...s.metricBox, textAlign: 'left' }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{a.icon}</div>
-                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#388bfd', marginBottom: 4 }}>{a.file}</div>
-                  <div style={{ fontSize: 12, color: '#8b949e' }}>{a.desc}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent)', marginBottom: 4 }}>{a.file}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{a.desc}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, fontSize: 13, color: '#484f58' }}>
+            <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
               Путь: <span style={s.mono}>backend/collection_app/ml/saved_models/</span>
             </div>
           </div>
 
           <div style={{ marginTop: 24 }}>
             <div style={{ ...s.sectionTitle, fontSize: 15 }}> Fallback: Rule-based эвристика</div>
-            <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 12 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
               Если обученная модель не найдена на диске, используется детерминированная эвристика:
             </div>
             <div style={s.logBox}>{`score = 0.5
@@ -471,24 +471,24 @@ decision = "approved" если score ≥ 0.5`}</div>
       {activeTab === 'rules' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> Жёсткие бизнес-правила (Hard Reject)</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
-            Правила кредитной политики, которые срабатывают <strong style={{ color: '#e6edf3' }}>до</strong> ML-модели и автоматически отклоняют заявку вне зависимости от прогноза. Тип модели в ответе: <span style={s.mono}>rule_override</span>.
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
+            Правила кредитной политики, которые срабатывают <strong style={{ color: 'var(--text-primary)' }}>до</strong> ML-модели и автоматически отклоняют заявку вне зависимости от прогноза. Тип модели в ответе: <span style={s.mono}>rule_override</span>.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
             {HARD_REJECT_RULES.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, padding: '12px 16px' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px' }}>
                 <span style={s.badge(r.color, r.color + '20')}></span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: '#e6edf3', fontWeight: 500, fontSize: 14 }}>{r.rule}</div>
-                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#8b949e', marginTop: 2 }}>{r.condition}</div>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: 14 }}>{r.rule}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{r.condition}</div>
                 </div>
               </div>
             ))}
           </div>
 
           <div style={{ ...s.sectionTitle, fontSize: 15 }}>Корректировка вероятности (DTI-штрафы)</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 12 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
             Если жёсткие правила не сработали, ML-модель выдаёт вероятность, которая корректируется DTI-штрафами:
           </div>
           <div style={s.logBox}>{`# Вероятность одобрения: approved_prob = model.predict_proba(X)[1]
@@ -519,7 +519,7 @@ decision = "approved" если approved_prob ≥ 0.5`}</div>
       {activeTab === 'api' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> REST API — Инференс модели</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Два эндпоинта для прогнозирования одобрения кредитных заявок.
           </div>
 
@@ -572,22 +572,22 @@ Response:
 }`,
             },
           ].map((ep, i) => (
-            <div key={i} style={{ marginBottom: 20, background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden' }}>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={s.badge('#388bfd', 'rgba(56,139,253,0.15)')}>{ep.method}</span>
-                <code style={{ fontSize: 13, color: '#e6edf3' }}>{ep.url}</code>
+            <div key={i} style={{ marginBottom: 20, background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={s.badge('var(--accent)', 'rgba(56,139,253,0.15)')}>{ep.method}</span>
+                <code style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ep.url}</code>
               </div>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid #21262d' }}>
-                <span style={{ fontSize: 13, color: '#8b949e' }}>{ep.desc}</span>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bg-elevated)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{ep.desc}</span>
               </div>
-              <pre style={{ margin: 0, padding: 14, fontSize: 12, color: '#8b949e', overflowX: 'auto', lineHeight: 1.5 }}>{ep.response}</pre>
+              <pre style={{ margin: 0, padding: 14, fontSize: 12, color: 'var(--text-secondary)', overflowX: 'auto', lineHeight: 1.5 }}>{ep.response}</pre>
             </div>
           ))}
 
-          <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(210,153,34,0.1)', border: '1px solid rgba(210,153,34,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-             Поле <span style={s.mono}>model_type</span> в ответе: <strong style={{ color: '#e6edf3' }}>gradient_boosting</strong> — решение ML-модели,{' '}
-            <strong style={{ color: '#d29922' }}>rule_override</strong> — жёсткие бизнес-правила,{' '}
-            <strong style={{ color: '#8b949e' }}>rule_based</strong> — fallback (модель не обучена).
+          <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(210,153,34,0.1)', border: '1px solid rgba(210,153,34,0.3)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+             Поле <span style={s.mono}>model_type</span> в ответе: <strong style={{ color: 'var(--text-primary)' }}>gradient_boosting</strong> — решение ML-модели,{' '}
+            <strong style={{ color: 'var(--warning)' }}>rule_override</strong> — жёсткие бизнес-правила,{' '}
+            <strong style={{ color: 'var(--text-secondary)' }}>rule_based</strong> — fallback (модель не обучена).
           </div>
         </div>
       )}
@@ -604,29 +604,29 @@ Response:
                 <div style={s.metricLabel}>Заявок в БД</div>
               </div>
               <div style={s.metricBox}>
-                <div style={{ ...s.metricValue, color: '#3fb950' }}>{dbStats.approved}</div>
+                <div style={{ ...s.metricValue, color: 'var(--success)' }}>{dbStats.approved}</div>
                 <div style={s.metricLabel}>Одобрено</div>
               </div>
               <div style={s.metricBox}>
-                <div style={{ ...s.metricValue, color: '#f85149' }}>{dbStats.rejected}</div>
+                <div style={{ ...s.metricValue, color: 'var(--danger)' }}>{dbStats.rejected}</div>
                 <div style={s.metricLabel}>Отказано</div>
               </div>
               <div style={s.metricBox}>
-                <div style={{ ...s.metricValue, color: '#d29922' }}>{dbStats.pending}</div>
+                <div style={{ ...s.metricValue, color: 'var(--warning)' }}>{dbStats.pending}</div>
                 <div style={s.metricLabel}>Ожидают</div>
               </div>
             </div>
           )}
 
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 14, color: '#e6edf3', fontWeight: 600, marginBottom: 8 }}>Команда для запуска из терминала:</div>
+            <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Команда для запуска из терминала:</div>
             <code style={s.code}>$ cd backend{'\n'}$ python manage.py train_approval_model</code>
-            <div style={{ fontSize: 13, color: '#8b949e', marginTop: 8 }}>С указанием количества обучающих примеров:</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>С указанием количества обучающих примеров:</div>
             <code style={s.code}>$ python manage.py train_approval_model --samples 2000</code>
           </div>
 
-          <div style={{ borderTop: '1px solid #30363d', paddingTop: 20 }}>
-            <div style={{ fontSize: 14, color: '#e6edf3', fontWeight: 600, marginBottom: 12 }}>Запуск через API (если эндпоинт настроен):</div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 12 }}>Запуск через API (если эндпоинт настроен):</div>
             <button
               style={{ ...s.trainBtn, ...(training ? s.trainBtnDisabled : {}) }}
               onClick={handleTrain}
@@ -637,7 +637,7 @@ Response:
           </div>
 
           {trainError && (
-            <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: '#f85149', fontSize: 13 }}>
+            <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: 'var(--danger)', fontSize: 13 }}>
                {trainError}
             </div>
           )}
@@ -691,7 +691,7 @@ Response:
 
               {trainingResult.feature_importances && (
                 <>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#e6edf3', marginBottom: 10 }}>Top-10 признаков</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Top-10 признаков</div>
                   {Object.entries(trainingResult.feature_importances)
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 10)
@@ -701,11 +701,11 @@ Response:
                       const featureLabel = FEATURE_GROUPS.flatMap(g => g.features).find(f => f.name === name)?.label || name;
                       return (
                         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                          <div style={{ width: 160, fontSize: 12, color: '#8b949e', textAlign: 'right' }}>{featureLabel}</div>
-                          <div style={{ flex: 1, height: 12, background: '#21262d', borderRadius: 6, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: '#388bfd', borderRadius: 6, transition: 'width 0.5s' }} />
+                          <div style={{ width: 160, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>{featureLabel}</div>
+                          <div style={{ flex: 1, height: 12, background: 'var(--bg-elevated)', borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 6, transition: 'width 0.5s' }} />
                           </div>
-                          <div style={{ width: 50, fontSize: 12, color: '#e6edf3', fontFamily: 'monospace' }}>{(imp * 100).toFixed(1)}%</div>
+                          <div style={{ width: 50, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{(imp * 100).toFixed(1)}%</div>
                         </div>
                       );
                     })}

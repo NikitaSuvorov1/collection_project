@@ -50,10 +50,10 @@ export default function LoginPage({ onLogin }) {
             id: firstOp ? firstOp.id : 51,
             name: 'Администратор',
             full_name: 'Администратор системы',
-            role: 'manager'
+            role: 'admin'
           });
         } catch {
-          onLogin({ id: 51, name: 'Администратор', full_name: 'Администратор системы', role: 'manager' });
+          onLogin({ id: 51, name: 'Администратор', full_name: 'Администратор системы', role: 'admin' });
         } finally {
           setLoading(false);
         }
@@ -140,7 +140,7 @@ export default function LoginPage({ onLogin }) {
           </div>
           
           {error && (
-            <div className="error" style={{ fontSize: 14, color: '#f85149' }}>
+            <div className="error" style={{ fontSize: 14, color: 'var(--danger)' }}>
               {error}
             </div>
           )}

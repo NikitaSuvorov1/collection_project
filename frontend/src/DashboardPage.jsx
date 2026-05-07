@@ -31,7 +31,7 @@ function StatCard({ title, value, sub, trend, color, icon }) {
         <span className="muted">{title}</span>
         {icon && <span className="stat-icon">{icon}</span>}
       </div>
-      <div className="stat-value" style={{ color: color || '#e6edf3' }}>{value}</div>
+      <div className="stat-value" style={{ color: color || 'var(--text-primary)' }}>{value}</div>
       <div className="stat-footer">
         {sub && <span className="stat-sub">{sub}</span>}
         {trend !== undefined && (
@@ -56,8 +56,8 @@ function ChartCard({ title, children, height = 300 }) {
 function LoadingSpinner() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-      <div style={{ width: 40, height: 40, border: '4px solid #30363d', borderTopColor: '#388bfd', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-      <p style={{ marginTop: 16, color: '#8b949e' }}>Загрузка данных из БД...</p>
+      <div style={{ width: 40, height: 40, border: '4px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+      <p style={{ marginTop: 16, color: 'var(--text-secondary)' }}>Загрузка данных из БД...</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -178,10 +178,10 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" />
-              <YAxis tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" />
-              <Tooltip contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: 8, color: '#e6edf3' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" />
+              <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} />
               <Legend />
               <Area type="monotone" dataKey="calls" name="Звонки" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCalls)" />
               <Area type="monotone" dataKey="contacts" name="Контакты" stroke="#22c55e" fillOpacity={1} fill="url(#colorContacts)" />
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                 paddingAngle={2}
                 dataKey="value"
                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                labelLine={{ stroke: '#484f58' }}
+                labelLine={{ stroke: 'var(--text-muted)' }}
               >
                 {(callResults || []).map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -219,11 +219,11 @@ export default function DashboardPage() {
         <ChartCard title=" Активность по часам дня">
           <ResponsiveContainer>
             <BarChart data={hourlyCalls || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-              <XAxis dataKey="hour" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" />
-              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" domain={[0, 100]} />
-              <Tooltip contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: 8, color: '#e6edf3' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="hour" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" />
+              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" domain={[0, 100]} />
+              <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} />
               <Legend />
               <Bar yAxisId="left" dataKey="calls" name="Звонки" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               <Line yAxisId="right" type="monotone" dataKey="contactRate" name="Контактность %" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ background: '#1c2128' }}>
+                <tr style={{ background: 'var(--bg-surface)' }}>
                   <td><strong>Итого</strong></td>
                   <td style={{ textAlign: 'right' }}><strong>{totals?.calls || 0}</strong></td>
                   <td style={{ textAlign: 'right' }}><strong>{totals?.contacts || 0}</strong></td>
@@ -308,10 +308,10 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: 40, background: '#1c2128', borderRadius: 8 }}>
-            <p style={{ color: '#8b949e' }}>Нет данных по операторам.</p>
-            <p style={{ color: '#484f58', fontSize: 14 }}>Запустите команду для заполнения БД:</p>
-            <code style={{ background: '#21262d', padding: '4px 8px', borderRadius: 4 }}>python manage.py populate_dashboard_data</code>
+          <div style={{ textAlign: 'center', padding: 40, background: 'var(--bg-surface)', borderRadius: 8 }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Нет данных по операторам.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Запустите команду для заполнения БД:</p>
+            <code style={{ background: 'var(--bg-elevated)', padding: '4px 8px', borderRadius: 4 }}>python manage.py populate_dashboard_data</code>
           </div>
         )}
       </div>
@@ -321,10 +321,10 @@ export default function DashboardPage() {
         <ChartCard title=" Сравнение операторов" height={280}>
           <ResponsiveContainer>
             <BarChart data={operatorStats} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#8b949e' }} stroke="#484f58" width={100} />
-              <Tooltip contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: 8, color: '#e6edf3' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} stroke="var(--text-muted)" width={100} />
+              <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} />
               <Legend />
               <Bar dataKey="calls" name="Звонки" fill="#3b82f6" radius={[0, 4, 4, 0]} />
               <Bar dataKey="contacts" name="Контакты" fill="#22c55e" radius={[0, 4, 4, 0]} />

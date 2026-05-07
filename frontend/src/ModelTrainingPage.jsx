@@ -153,51 +153,51 @@ const HYPERPARAMS = [
 ];
 
 const TARGET_RULES = [
-  { cls: 0, label: 'Низкий риск', color: '#3fb950', condition: 'overdue_ratio < 0.2 И max_overdue_days < 15', bg: 'rgba(63,185,80,0.15)' },
-  { cls: 1, label: 'Средний риск', color: '#d29922', condition: '0.2 ≤ overdue_ratio < 0.5 ИЛИ 15 < max_overdue_days ≤ 60', bg: 'rgba(210,153,34,0.15)' },
-  { cls: 2, label: 'Высокий риск', color: '#f85149', condition: 'overdue_ratio ≥ 0.5 ИЛИ max_overdue_days > 60 ИЛИ статус ∈ {default, legal, sold, written_off}', bg: 'rgba(248,81,73,0.15)' },
+  { cls: 0, label: 'Низкий риск', color: 'var(--success)', condition: 'overdue_ratio < 0.2 И max_overdue_days < 15', bg: 'rgba(63,185,80,0.15)' },
+  { cls: 1, label: 'Средний риск', color: 'var(--warning)', condition: '0.2 ≤ overdue_ratio < 0.5 ИЛИ 15 < max_overdue_days ≤ 60', bg: 'rgba(210,153,34,0.15)' },
+  { cls: 2, label: 'Высокий риск', color: 'var(--danger)', condition: 'overdue_ratio ≥ 0.5 ИЛИ max_overdue_days > 60 ИЛИ статус ∈ {default, legal, sold, written_off}', bg: 'rgba(248,81,73,0.15)' },
 ];
 
 const s = {
   page: { maxWidth: 1200, margin: '0 auto', padding: '24px 16px' },
-  h1: { fontSize: 24, fontWeight: 700, color: '#e6edf3', margin: '0 0 4px' },
-  subtitle: { fontSize: 14, color: '#8b949e', marginBottom: 24 },
-  section: { background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 20, marginBottom: 20 },
-  sectionTitle: { fontSize: 17, fontWeight: 700, color: '#e6edf3', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 },
+  h1: { fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' },
+  subtitle: { fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 },
+  section: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 },
   tabs: { display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' },
   tab: (active) => ({
-    padding: '8px 16px', borderRadius: 6, border: '1px solid #30363d', cursor: 'pointer',
+    padding: '8px 16px', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer',
     fontSize: 13, fontWeight: 500, transition: 'all .15s',
-    background: active ? 'rgba(56,139,253,0.15)' : '#0d1117',
-    color: active ? '#388bfd' : '#8b949e',
-    borderColor: active ? '#388bfd' : '#30363d',
+    background: active ? 'rgba(56,139,253,0.15)' : 'var(--bg-body)',
+    color: active ? 'var(--accent)' : 'var(--text-secondary)',
+    borderColor: active ? 'var(--accent)' : 'var(--border)',
   }),
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #30363d', color: '#8b949e', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' },
-  td: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#e6edf3', verticalAlign: 'top' },
-  mono: { fontFamily: 'monospace', fontSize: 12, color: '#8b949e', background: '#0d1117', padding: '2px 6px', borderRadius: 4 },
+  th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '10px 12px', borderBottom: '1px solid var(--bg-elevated)', color: 'var(--text-primary)', verticalAlign: 'top' },
+  mono: { fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-body)', padding: '2px 6px', borderRadius: 4 },
   badge: (color, bg) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color, background: bg }),
   stepCard: (active) => ({
-    background: active ? '#1c2128' : '#161b22', border: `1px solid ${active ? '#388bfd' : '#30363d'}`, borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all .15s',
+    background: active ? 'var(--bg-surface)' : 'var(--bg-card)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all .15s',
   }),
-  stepN: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: '#21262d', color: '#e6edf3', fontSize: 13, fontWeight: 700, marginRight: 10 },
-  arrow: { textAlign: 'center', color: '#484f58', fontSize: 20, padding: '4px 0' },
-  code: { fontFamily: 'monospace', fontSize: 13, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, padding: '10px 14px', color: '#e6edf3', display: 'block', marginTop: 10, wordBreak: 'break-all' },
-  metricBox: { background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, padding: '12px 16px', textAlign: 'center' },
-  metricValue: { fontSize: 28, fontWeight: 700, color: '#e6edf3', lineHeight: 1.1 },
-  metricLabel: { fontSize: 12, color: '#8b949e', marginTop: 4 },
-  groupHeader: { fontSize: 15, fontWeight: 600, color: '#e6edf3', padding: '12px 0 8px', borderBottom: '1px solid #30363d', marginBottom: 12 },
-  featureRow: { display: 'grid', gridTemplateColumns: '180px 1fr 1fr 90px', gap: 8, padding: '8px 0', borderBottom: '1px solid #21262d', fontSize: 13, alignItems: 'start' },
-  muted: { color: '#8b949e' },
-  param: { fontFamily: 'monospace', fontSize: 13, color: '#388bfd' },
+  stepN: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, marginRight: 10 },
+  arrow: { textAlign: 'center', color: 'var(--text-muted)', fontSize: 20, padding: '4px 0' },
+  code: { fontFamily: 'monospace', fontSize: 13, background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px', color: 'var(--text-primary)', display: 'block', marginTop: 10, wordBreak: 'break-all' },
+  metricBox: { background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', textAlign: 'center' },
+  metricValue: { fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 },
+  metricLabel: { fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 },
+  groupHeader: { fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', padding: '12px 0 8px', borderBottom: '1px solid var(--border)', marginBottom: 12 },
+  featureRow: { display: 'grid', gridTemplateColumns: '180px 1fr 1fr 90px', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--bg-elevated)', fontSize: 13, alignItems: 'start' },
+  muted: { color: 'var(--text-secondary)' },
+  param: { fontFamily: 'monospace', fontSize: 13, color: 'var(--accent)' },
   trainBtn: {
     padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-    fontSize: 14, fontWeight: 600, background: '#388bfd', color: '#fff', transition: 'opacity .15s',
+    fontSize: 14, fontWeight: 600, background: 'var(--accent)', color: '#fff', transition: 'opacity .15s',
   },
   trainBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   logBox: {
-    fontFamily: 'monospace', fontSize: 12, background: '#0d1117', border: '1px solid #30363d',
-    borderRadius: 8, padding: 14, color: '#8b949e', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap',
+    fontFamily: 'monospace', fontSize: 12, background: 'var(--bg-body)', border: '1px solid var(--border)',
+    borderRadius: 8, padding: 14, color: 'var(--text-secondary)', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap',
     lineHeight: 1.6,
   },
 };
@@ -280,14 +280,14 @@ export default function ModelTrainingPage() {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <span style={s.stepN}>{step.step}</span>
                     <span style={{ fontSize: 18, marginRight: 8 }}>{step.icon}</span>
-                    <strong style={{ color: '#e6edf3', fontSize: 14 }}>{step.title}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>{step.title}</strong>
                   </div>
-                  <div style={{ color: '#8b949e', fontSize: 13, marginTop: 8, marginLeft: 38 }}>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 8, marginLeft: 38 }}>
                     {step.desc}
                   </div>
                   {activeStep === i && (
                     <div style={{ marginTop: 12, marginLeft: 38 }}>
-                      <div style={{ color: '#e6edf3', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                      <div style={{ color: 'var(--text-primary)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                         {step.detail}
                       </div>
                       {step.command && (
@@ -307,12 +307,12 @@ export default function ModelTrainingPage() {
       {activeTab === 'features' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> Вектор признаков — 26 features</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Каждая запись обучающей выборки содержит вектор из 26 числовых признаков, извлечённых из 4 таблиц БД.
           </div>
 
           {/* Header */}
-          <div style={{ ...s.featureRow, fontWeight: 700, color: '#8b949e', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #30363d' }}>
+          <div style={{ ...s.featureRow, fontWeight: 700, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>
             <div>Признак</div>
             <div>Источник (таблица.поле)</div>
             <div>Трансформация</div>
@@ -325,8 +325,8 @@ export default function ModelTrainingPage() {
               {group.features.map(f => (
                 <div key={f.name} style={s.featureRow}>
                   <div>
-                    <span style={{ color: '#e6edf3', fontWeight: 500 }}>{f.label}</span>
-                    <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#484f58', marginTop: 2 }}>{f.name}</div>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{f.label}</span>
+                    <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{f.name}</div>
                   </div>
                   <div style={s.muted}>{f.source}</div>
                   <div><span style={s.mono}>{f.transform}</span></div>
@@ -336,8 +336,8 @@ export default function ModelTrainingPage() {
             </div>
           ))}
 
-          <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: '#8b949e' }}>
-             Все признаки нормализуются через <strong style={{ color: '#e6edf3' }}>StandardScaler</strong> (μ=0, σ=1) перед подачей в модель. Fit выполняется только на train-выборке.
+          <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(56,139,253,0.1)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+             Все признаки нормализуются через <strong style={{ color: 'var(--text-primary)' }}>StandardScaler</strong> (μ=0, σ=1) перед подачей в модель. Fit выполняется только на train-выборке.
           </div>
         </div>
       )}
@@ -346,7 +346,7 @@ export default function ModelTrainingPage() {
       {activeTab === 'target' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> Целевая переменная — risk_category</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Мультиклассовая классификация: 3 категории риска выхода на просрочку.
           </div>
 
@@ -357,7 +357,7 @@ export default function ModelTrainingPage() {
                   <span style={s.badge(r.color, r.bg)}>{r.cls}</span>
                   <strong style={{ color: r.color, fontSize: 15 }}>{r.label}</strong>
                 </div>
-                <div style={{ color: '#e6edf3', fontSize: 13, fontFamily: 'monospace' }}>{r.condition}</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: 13, fontFamily: 'monospace' }}>{r.condition}</div>
               </div>
             ))}
           </div>
@@ -397,7 +397,7 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
       {activeTab === 'model' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> RandomForestClassifier — гиперпараметры</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Ансамблевый метод: коллектив из 200 деревьев решений с ограничением сложности и балансировкой классов.
           </div>
 
@@ -413,7 +413,7 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
               {HYPERPARAMS.map(h => (
                 <tr key={h.param}>
                   <td style={s.td}><span style={s.param}>{h.param}</span></td>
-                  <td style={s.td}><strong style={{ color: '#e6edf3' }}>{h.value}</strong></td>
+                  <td style={s.td}><strong style={{ color: 'var(--text-primary)' }}>{h.value}</strong></td>
                   <td style={s.td}><span style={s.muted}>{h.desc}</span></td>
                 </tr>
               ))}
@@ -430,19 +430,19 @@ where overdue_ratio = overdue_payments / total_payments`}</div>
               ].map(a => (
                 <div key={a.file} style={{ ...s.metricBox, textAlign: 'left' }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>{a.icon}</div>
-                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#388bfd', marginBottom: 4 }}>{a.file}</div>
-                  <div style={{ fontSize: 12, color: '#8b949e' }}>{a.desc}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent)', marginBottom: 4 }}>{a.file}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{a.desc}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, fontSize: 13, color: '#484f58' }}>
+            <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
               Путь: <span style={s.mono}>backend/collection_app/ml/saved_models/</span>
             </div>
           </div>
 
           <div style={{ marginTop: 24 }}>
             <div style={{ ...s.sectionTitle, fontSize: 15 }}> Fallback: Rule-based эвристика</div>
-            <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 12 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 12 }}>
               Если обученная модель не найдена на диске, используется детерминированная эвристика:
             </div>
             <div style={s.logBox}>{`score = 0.0
@@ -467,7 +467,7 @@ risk_category:
       {activeTab === 'api' && (
         <div style={s.section}>
           <div style={s.sectionTitle}> REST API — Инференс модели</div>
-          <div style={{ color: '#8b949e', fontSize: 13, marginBottom: 20 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
             Эндпоинт <span style={s.mono}>/api/overdue-prediction/</span> — прогнозирование риска просрочки для клиентов/кредитов.
           </div>
 
@@ -511,17 +511,17 @@ Response:
 }`,
             },
           ].map((ep, i) => (
-            <div key={i} style={{ marginBottom: 20, background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden' }}>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={s.badge(ep.method === 'GET' ? '#3fb950' : '#388bfd', ep.method === 'GET' ? 'rgba(63,185,80,0.15)' : 'rgba(56,139,253,0.15)')}>
+            <div key={i} style={{ marginBottom: 20, background: 'var(--bg-body)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={s.badge(ep.method === 'GET' ? 'var(--success)' : 'var(--accent)', ep.method === 'GET' ? 'rgba(63,185,80,0.15)' : 'rgba(56,139,253,0.15)')}>
                   {ep.method}
                 </span>
-                <code style={{ fontSize: 13, color: '#e6edf3' }}>{ep.url}</code>
+                <code style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ep.url}</code>
               </div>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid #21262d' }}>
-                <span style={{ fontSize: 13, color: '#8b949e' }}>{ep.desc}</span>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bg-elevated)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{ep.desc}</span>
               </div>
-              <pre style={{ margin: 0, padding: 14, fontSize: 12, color: '#8b949e', overflowX: 'auto', lineHeight: 1.5 }}>{ep.response}</pre>
+              <pre style={{ margin: 0, padding: 14, fontSize: 12, color: 'var(--text-secondary)', overflowX: 'auto', lineHeight: 1.5 }}>{ep.response}</pre>
             </div>
           ))}
         </div>
@@ -540,27 +540,27 @@ Response:
                 <div style={s.metricLabel}>Кредитов в БД</div>
               </div>
               <div style={s.metricBox}>
-                <div style={{ ...s.metricValue, color: '#3fb950' }}>{dbStats.activeCount}</div>
+                <div style={{ ...s.metricValue, color: 'var(--success)' }}>{dbStats.activeCount}</div>
                 <div style={s.metricLabel}>Активных</div>
               </div>
               <div style={s.metricBox}>
-                <div style={{ ...s.metricValue, color: '#f85149' }}>{dbStats.overdueCount}</div>
+                <div style={{ ...s.metricValue, color: 'var(--danger)' }}>{dbStats.overdueCount}</div>
                 <div style={s.metricLabel}>Просроченных</div>
               </div>
             </div>
           )}
 
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 14, color: '#e6edf3', fontWeight: 600, marginBottom: 8 }}>Команда для запуска из терминала:</div>
+            <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8 }}>Команда для запуска из терминала:</div>
             <code style={s.code}>$ cd backend{'\n'}$ python manage.py train_overdue_model</code>
-            <div style={{ fontSize: 13, color: '#8b949e', marginTop: 8 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>
               С использованием таблицы TrainingData:
             </div>
             <code style={s.code}>$ python manage.py train_overdue_model --use-db-training-data</code>
           </div>
 
-          <div style={{ borderTop: '1px solid #30363d', paddingTop: 20 }}>
-            <div style={{ fontSize: 14, color: '#e6edf3', fontWeight: 600, marginBottom: 12 }}>Запуск через API (если эндпоинт настроен):</div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 12 }}>Запуск через API (если эндпоинт настроен):</div>
             <button
               style={{ ...s.trainBtn, ...(training ? s.trainBtnDisabled : {}) }}
               onClick={handleTrain}
@@ -571,7 +571,7 @@ Response:
           </div>
 
           {trainError && (
-            <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: '#f85149', fontSize: 13 }}>
+            <div style={{ marginTop: 16, padding: 12, background: 'rgba(248,81,73,0.15)', border: '1px solid rgba(248,81,73,0.4)', borderRadius: 8, color: 'var(--danger)', fontSize: 13 }}>
                {trainError}
             </div>
           )}
@@ -629,7 +629,7 @@ Response:
 
               {trainingResult.feature_importances && (
                 <>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#e6edf3', marginBottom: 10 }}>Top-10 признаков</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Top-10 признаков</div>
                   {Object.entries(trainingResult.feature_importances)
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 10)
@@ -639,11 +639,11 @@ Response:
                       const featureLabel = FEATURE_GROUPS.flatMap(g => g.features).find(f => f.name === name)?.label || name;
                       return (
                         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                          <div style={{ width: 160, fontSize: 12, color: '#8b949e', textAlign: 'right' }}>{featureLabel}</div>
-                          <div style={{ flex: 1, height: 12, background: '#21262d', borderRadius: 6, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: '#388bfd', borderRadius: 6, transition: 'width 0.5s' }} />
+                          <div style={{ width: 160, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>{featureLabel}</div>
+                          <div style={{ flex: 1, height: 12, background: 'var(--bg-elevated)', borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 6, transition: 'width 0.5s' }} />
                           </div>
-                          <div style={{ width: 50, fontSize: 12, color: '#e6edf3', fontFamily: 'monospace' }}>{(imp * 100).toFixed(1)}%</div>
+                          <div style={{ width: 50, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{(imp * 100).toFixed(1)}%</div>
                         </div>
                       );
                     })}

@@ -30,8 +30,8 @@ const MOCK_HISTORY = [];
 // Стили для табов в сайдбаре
 const tabStyle = (active) => ({
   flex: 1, padding: '6px 0', textAlign: 'center', cursor: 'pointer',
-  fontWeight: 600, fontSize: 12, borderBottom: active ? '2px solid #388bfd' : '2px solid transparent',
-  color: active ? '#58a6ff' : '#8b949e', background: active ? 'rgba(56,139,253,0.1)' : 'transparent',
+  fontWeight: 600, fontSize: 12, borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+  color: active ? 'var(--accent-hover)' : 'var(--text-secondary)', background: active ? 'rgba(56,139,253,0.1)' : 'transparent',
   transition: 'all 0.15s',
 });
 
@@ -39,8 +39,8 @@ const formatCurrency = (v) => Number(v || 0).toLocaleString("ru-RU", { style: "c
 const relativeDate = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
 
 const getRiskColor = (segment) => {
-  const colors = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444', critical: '#f85149' };
-  return colors[segment] || '#8b949e';
+  const colors = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444', critical: 'var(--danger)' };
+  return colors[segment] || 'var(--text-secondary)';
 };
 
 const getUrgencyLabel = (u) => {
@@ -472,7 +472,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
             </select>
           </div>
           {/* === Вкладки === */}
-          <div style={{display:'flex',borderBottom:'1px solid #30363d',marginBottom:0}}>
+          <div style={{display:'flex',borderBottom:'1px solid var(--border)',marginBottom:0}}>
             <div style={tabStyle(sidebarTab === 'pending')} onClick={() => setSidebarTab('pending')}>
                К отработке ({pendingVisible.length})
             </div>
@@ -502,7 +502,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                   <div className="cli-amount">{formatCurrency(d.outstanding)}</div>
                   <div className="cli-days">{d.daysPastDue} дн.</div>
                 </div>
-                <div style={{width:'100%',fontSize:12,color:'#8b949e',marginTop:8}}>Попыток: {d.attempts} • Последний контакт: {relativeDate(d.lastContact)}</div>
+                <div style={{width:'100%',fontSize:12,color:'var(--text-secondary)',marginTop:8}}>Попыток: {d.attempts} • Последний контакт: {relativeDate(d.lastContact)}</div>
               </div>
             ))}
 
@@ -520,7 +520,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                   <div className="cli-amount">{formatCurrency(d.outstanding)}</div>
                   <div className="cli-days">{d.daysPastDue} дн.</div>
                 </div>
-                <div style={{width:'100%',fontSize:12,color:'#8b949e',marginTop:8}}>
+                <div style={{width:'100%',fontSize:12,color:'var(--text-secondary)',marginTop:8}}>
                   <span style={{color:'#16a34a',fontWeight:600}}>Сегодня: {d.todayCount} воздейств.</span> • Последний: {relativeDate(d.lastContact)}
                 </div>
               </div>
@@ -540,10 +540,10 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                   <div className="muted">Просрочка: {selected.daysPastDue} дней</div>
                   {debtBreakdown.total > 0 && (
                     <div style={{marginTop:8,padding:'8px 12px',background:'rgba(248,81,73,0.15)',borderRadius:8,border:'1px solid rgba(248,81,73,0.4)',fontSize:13}}>
-                      <div style={{fontWeight:600,fontSize:12,color:'#f85149',marginBottom:4}}>Структура задолженности:</div>
+                      <div style={{fontWeight:600,fontSize:12,color:'var(--danger)',marginBottom:4}}>Структура задолженности:</div>
                       <div style={{display:'flex',justifyContent:'space-between'}}><span>Основной долг:</span><strong>{formatCurrency(debtBreakdown.overduePrincipal)}</strong></div>
                       <div style={{display:'flex',justifyContent:'space-between'}}><span>Проценты:</span><strong>{formatCurrency(debtBreakdown.overdueInterest)}</strong></div>
-                      <div style={{display:'flex',justifyContent:'space-between'}}><span>Штрафы/пени:</span><strong style={{color:'#f85149'}}>{formatCurrency(debtBreakdown.penalties)}</strong></div>
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span>Штрафы/пени:</span><strong style={{color:'var(--danger)'}}>{formatCurrency(debtBreakdown.penalties)}</strong></div>
                       <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(248,81,73,0.4)',marginTop:4,paddingTop:4,fontWeight:700}}><span>Итого:</span><span>{formatCurrency(debtBreakdown.total)}</span></div>
                     </div>
                   )}
@@ -583,12 +583,12 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
               </div>
               {complianceError && (
                 <div style={{margin:'12px 0',padding:'12px 16px',background:'rgba(248,81,73,0.12)',border:'1px solid rgba(248,81,73,0.5)',borderRadius:8}}>
-                  <div style={{fontWeight:700,color:'#f85149',marginBottom:6,fontSize:13}}>⛔ Контакт заблокирован — 230-ФЗ</div>
+                  <div style={{fontWeight:700,color:'var(--danger)',marginBottom:6,fontSize:13}}>⛔ Контакт заблокирован — 230-ФЗ</div>
                   {complianceError.violations?.map((v, i) => (
-                    <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'2px 0'}}>• {v}</div>
+                    <div key={i} style={{fontSize:12,color:'var(--text-primary)',padding:'2px 0'}}>• {v}</div>
                   ))}
                   {complianceError.counts && (
-                    <div style={{marginTop:8,fontSize:11,color:'#8b949e'}}>
+                    <div style={{marginTop:8,fontSize:11,color:'var(--text-secondary)'}}>
                       Контактов сегодня: {complianceError.counts.day} / {complianceError.limits?.day} &nbsp;|&nbsp;
                       за неделю: {complianceError.counts.week} / {complianceError.limits?.week} &nbsp;|&nbsp;
                       за месяц: {complianceError.counts.month} / {complianceError.limits?.month}
@@ -617,9 +617,9 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                       </div>
                     )}
                     {h.result === 'refuse' && h.refusalReason && (
-                      <div style={{color:'#f85149',fontSize:13,marginTop:2}}>Причина: {h.refusalReason}</div>
+                      <div style={{color:'var(--danger)',fontSize:13,marginTop:2}}>Причина: {h.refusalReason}</div>
                     )}
-                    {h.note && <div style={{color:'#8b949e',fontSize:13}}>{h.note}</div>}
+                    {h.note && <div style={{color:'var(--text-secondary)',fontSize:13}}>{h.note}</div>}
                   </div>
                 ))}
               </div>
@@ -635,14 +635,14 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
             {/* Copilot Suggestions / Pre-overdue Script */}
             {preOverdueContext && selected?.id === preOverdueContext.client_id ? (
               <div style={{background:'rgba(56,139,253,0.15)',border:'1px solid rgba(56,139,253,0.5)',borderRadius:8,padding:10,marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:700,color:'#58a6ff',marginBottom:6}}>📄 Инструкция: напоминание о платеже</div>
+                <div style={{fontSize:12,fontWeight:700,color:'var(--accent-hover)',marginBottom:6}}>📄 Инструкция: напоминание о платеже</div>
                 <div style={{fontSize:11,color:'#f0883e',fontWeight:600,marginBottom:4}}>Риск просрочки: {preOverdueContext.risk_label} ({(preOverdueContext.risk_score*100).toFixed(0)}%)</div>
                 {preOverdueContext.next_payment_date && (
-                  <div style={{fontSize:11,color:'#8b949e',marginBottom:8}}>Платёж: {Number(preOverdueContext.monthly_payment||0).toLocaleString('ru-RU')} ₽ — {new Date(preOverdueContext.next_payment_date + 'T00:00:00').toLocaleDateString('ru-RU')}{preOverdueContext.days_to_payment != null && ` (через ${preOverdueContext.days_to_payment} дн.)`}</div>
+                  <div style={{fontSize:11,color:'var(--text-secondary)',marginBottom:8}}>Платёж: {Number(preOverdueContext.monthly_payment||0).toLocaleString('ru-RU')} ₽ — {new Date(preOverdueContext.next_payment_date + 'T00:00:00').toLocaleDateString('ru-RU')}{preOverdueContext.days_to_payment != null && ` (через ${preOverdueContext.days_to_payment} дн.)`}</div>
                 )}
                 {['opening','reminder','benefits','closing'].map(stage => (
                   <div key={stage} style={{marginBottom:8}}>
-                    <div style={{fontSize:11,fontWeight:600,color:'#58a6ff',marginBottom:2}}>
+                    <div style={{fontSize:11,fontWeight:600,color:'var(--accent-hover)',marginBottom:2}}>
                       {stage === 'opening' ? 'Приветствие' : stage === 'reminder' ? 'Напоминание' : stage === 'benefits' ? 'Мотивация' : 'Завершение'}
                     </div>
                     {PRE_OVERDUE_SCRIPT[stage].map((ph, i) => {
@@ -653,7 +653,7 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
                         .replace('{date}', preOverdueContext.next_payment_date ? new Date(preOverdueContext.next_payment_date+'T00:00:00').toLocaleDateString('ru-RU') : '')
                         .replace('{days_left}', preOverdueContext.days_to_payment ?? '?');
                       return (
-                        <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'3px 0',cursor:'pointer'}}
+                        <div key={i} style={{fontSize:12,color:'var(--text-primary)',padding:'3px 0',cursor:'pointer'}}
                              onClick={() => navigator.clipboard.writeText(text)} title="Клик чтобы скопировать">
                           → {text}
                         </div>
@@ -665,10 +665,10 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
               </div>
             ) : (
             <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,marginBottom:10}}>
-              <div style={{fontSize:12,fontWeight:600,color:'#3fb950',marginBottom:6}}> Copilot подсказки:</div>
-              <div style={{fontSize:11,color:'#8b949e'}}>Фразы для этого типа клиента:</div>
+              <div style={{fontSize:12,fontWeight:600,color:'var(--success)',marginBottom:6}}> Copilot подсказки:</div>
+              <div style={{fontSize:11,color:'var(--text-secondary)'}}>Фразы для этого типа клиента:</div>
               {selectedCopilotPhrases.slice(0,2).map((phrase, i) => (
-                <div key={i} style={{fontSize:12,color:'#e6edf3',padding:'4px 0',cursor:'pointer'}} 
+                <div key={i} style={{fontSize:12,color:'var(--text-primary)',padding:'4px 0',cursor:'pointer'}}
                      onClick={() => navigator.clipboard.writeText(phrase)} title="Клик чтобы скопировать">
                   → {phrase}
                 </div>
@@ -690,17 +690,17 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
             {/* Поля для обещания */}
             {resultCode === 'promise_to_pay' && (
               <div style={{background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#3fb950',display:'block',marginBottom:6}}> Данные обещания</label>
+                <label style={{fontSize:12,fontWeight:600,color:'var(--success)',display:'block',marginBottom:6}}> Данные обещания</label>
                 <div style={{marginBottom:6}}>
-                  <label style={{fontSize:12,color:'#8b949e',display:'block'}}>Сумма обещания (₽)</label>
+                  <label style={{fontSize:12,color:'var(--text-secondary)',display:'block'}}>Сумма обещания (₽)</label>
                   <input type="number" value={promiseAmount} onChange={e=>setPromiseAmount(e.target.value)}
                     placeholder="Например: 15000" min="0" step="1000"
-                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:14,marginTop:2,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}} />
+                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontSize:14,marginTop:2,boxSizing:'border-box',background:'var(--bg-body)',color:'var(--text-primary)'}} />
                 </div>
                 <div>
-                  <label style={{fontSize:12,color:'#8b949e',display:'block'}}>Дата обещанной оплаты</label>
+                  <label style={{fontSize:12,color:'var(--text-secondary)',display:'block'}}>Дата обещанной оплаты</label>
                   <input type="date" value={promiseDate} onChange={e=>setPromiseDate(e.target.value)}
-                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:14,marginTop:2,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}} />
+                    style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontSize:14,marginTop:2,boxSizing:'border-box',background:'var(--bg-body)',color:'var(--text-primary)'}} />
                 </div>
               </div>
             )}
@@ -708,9 +708,9 @@ export default function CollectionDeskApp({ user, onClient360, onCreditClick, pr
             {/* Поля для отказа */}
             {resultCode === 'decline' && (
               <div style={{background:'rgba(248,81,73,0.15)',border:'1px solid rgba(248,81,73,0.4)',borderRadius:8,padding:10,margin:'8px 0'}}>
-                <label style={{fontSize:12,fontWeight:600,color:'#f85149',display:'block',marginBottom:6}}> Причина отказа</label>
+                <label style={{fontSize:12,fontWeight:600,color:'var(--danger)',display:'block',marginBottom:6}}> Причина отказа</label>
                 <select value={refusalReason} onChange={e=>setRefusalReason(e.target.value)}
-                  style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid #30363d',fontSize:13,boxSizing:'border-box',background:'#0d1117',color:'#e6edf3'}}>
+                  style={{width:'100%',padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontSize:13,boxSizing:'border-box',background:'var(--bg-body)',color:'var(--text-primary)'}}>
                   <option value="">— Выберите причину —</option>
                   {REFUSAL_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>

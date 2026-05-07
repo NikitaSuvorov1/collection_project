@@ -6,6 +6,8 @@ What's included
 - Backend: Django + Django REST Framework with token auth and models for clients, credits, payments, interventions, operators, scoring results, assignments and credit applications.
 - ML stubs: two model stubs under `backend/ml/` and a management command to run scoring and save `ScoringResult` records.
 - Frontend: React (Vite) simple app with login and basic pages for operator, manager and admin.
+- UI: light production-style theme with the common plaque `ИС "Система ДРПЗ"` on every page.
+- Admin: strict daily collection plan page available only for the `admin` role.
 - DB: `docker-compose.yml` to run PostgreSQL locally. `.env.example` shows required environment variables.
 
 Quick start (Windows PowerShell)
@@ -44,6 +46,11 @@ npm run dev
 Notes
 - The Django settings default to SQLite for convenience. When you use PostgreSQL, point the DB env vars to the docker-compose service.
 - ML models are stubs in `backend/ml/`. Replace stub functions with real models and adapt `collection/management/commands/run_scoring.py` to schedule scoring on real data.
+- Quick admin login for the frontend: `admin` / `admin`. This opens the admin role and shows the `План взыскания` navigation item.
+- Documentation screenshots:
+  - `screenshots/plan-vzyskaniya-current-day.png`
+  - `screenshots/raspredelenie-klientov-obzvon.png`
+- Updated database design chapter: `docs/database_chapter.md`.
 
 Next steps
 - Implement business logic for automatic assignment, scoring pipelines, and real ML models.
